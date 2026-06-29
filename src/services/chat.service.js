@@ -10,7 +10,8 @@ import {
 import { findRecommendations } from "./matching.service.js";
 import { retrieveChunksForProperties } from "./embedding.service.js";
 import { firstMissingSlot, nextQuestion } from "../utils/questions.js";
-import { scoreLead, leadTier } from "../utils/scoring.js";
+import { scoreLead, leadTier, deriveTargetBHK } from "../utils/scoring.js";
+import { bhkNumber } from "../utils/normalize.js";
 import { isValidIndianPhone, normalizePhone, isValidEmail } from "../utils/validate.js";
 import { extractHeuristic } from "./extract.heuristic.js";
 
@@ -291,6 +292,20 @@ export async function handleChat({ sessionId, message, pageUrl }) {
 
   if (next) {
     mode = "ask";
+    // Consultative nudge (personality.md): if the chosen config looks small for
+    // the household, ask the advisor to gently educate and offer larger options
+    // too — fired only on the turn the size info was just given.
+    let advisorNote = null;
+    const chosenBhk = bhkNumber(prefs.bhk);
+    const targets = deriveTargetBHK(prefs);
+    const justGaveSize = extracted.bhk != null || extracted.family_members != null;
+    if (justGaveSize && chosenBhk != null && targets.length && chosenBhk < Math.min(...targets)) {
+      advisorNote =
+        `The customer wants a ${prefs.bhk} but mentioned ${prefs.family_members} people staying. ` +
+        `Gently note that a ${prefs.bhk} may feel restrictive for them over time, and that you'd be ` +
+        `glad to also show ${Math.min(...targets)}–${Math.max(...targets)} BHK options to compare — ` +
+        `never insist or imply their choice is wrong.`;
+    }
     reply =
       (llmAvailable() &&
         (await safePhrase(() =>
@@ -299,6 +314,7 @@ export async function handleChat({ sessionId, message, pageUrl }) {
             userName: firstName(prefs),
             nextQuestion: next.question,
             secondQuestion: next.secondQuestion,
+            advisorNote,
           })
         ))) ||
       fallbackAsk(next, isFirstTurn, prefs);
