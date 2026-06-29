@@ -11,7 +11,8 @@ function parseYesNo(low) {
 
 // Parse INR amounts from text. "1.6 cr", "2.5-3 cr", "45 lakh", "2 cr".
 function parseBudgetRange(text) {
-  const cleaned = String(text).replace(/\d+\s*bhk/gi, " "); // don't read "2 BHK" as money
+  // Don't read "2 BHK" / "1 bedroom" as money.
+  const cleaned = String(text).replace(/\d+\s*(?:bhk|bed(?:room)?s?)/gi, " ");
   const re = /([\d.,]+)\s*(cr|crore|crores|lakh|lac|lacs|l)?/gi;
   const amounts = [];
   let m;

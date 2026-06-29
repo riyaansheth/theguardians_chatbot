@@ -244,6 +244,19 @@ export async function handleChat({ sessionId, message, pageUrl }) {
 
   // 4. MERGE + validate, then persist prefs to the lead row.
   const prefs = mergePrefs(prefsBefore, extracted);
+
+  // "a bedroom for each / individual bedrooms" means one bedroom per person, so
+  // the configuration should match the household size — NOT a literal small
+  // number like the "1" in "1 bedroom for each". This overrides any misparse.
+  const wantsBedroomEach =
+    /\b(individual|separate|own|personal)\s+bedrooms?\b/i.test(message) ||
+    /\bbedrooms?\s+(?:for|per|to)\s+(?:each|every|all|everyone|us)\b/i.test(message) ||
+    /\b(?:one|1|a)\s+bedrooms?\s+(?:for\s+)?(?:each|every|per)\b/i.test(message) ||
+    /\beach\s+(?:of us\s+)?(?:gets?\s+)?(?:a|our|their|his|her)?\s*(?:own\s+)?bedrooms?\b/i.test(message);
+  if (wantsBedroomEach && prefs.family_members) {
+    prefs.bhk = `${prefs.family_members} BHK`;
+  }
+
   if (prefs.phone != null) {
     if (isValidIndianPhone(prefs.phone)) prefs.phone = normalizePhone(prefs.phone);
     else delete prefs.phone; // invalid -> keep asking
@@ -260,7 +273,7 @@ export async function handleChat({ sessionId, message, pageUrl }) {
     .join(" ")
     .toLowerCase();
   const mentionedMoney =
-    /\b\d+(?:\.\d+)?\s*(?:crore|cr|lakh|lac|lacs|k)\b/.test(userSaid) ||
+    /\b\d+(?:\.\d+)?\s*(?:crores?|cr|lakhs?|lacs?|k)\b/.test(userSaid) ||
     /₹\s*\d/.test(userSaid) ||
     /\bbudget\b/.test(userSaid);
   if (!mentionedMoney) {
