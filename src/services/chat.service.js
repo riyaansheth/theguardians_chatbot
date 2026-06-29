@@ -252,6 +252,11 @@ export async function handleChat({ sessionId, message, pageUrl }) {
   // 4. MERGE + validate, then persist prefs to the lead row.
   const prefs = mergePrefs(prefsBefore, extracted);
 
+  // "start over / forget everything" — wipe collected preferences and restart.
+  if (/\b(start over|start again|restart|reset|forget (everything|what i (said|told|mentioned))|begin again|new search|clear (everything|all|it all))\b/i.test(message)) {
+    for (const k of Object.keys(prefs)) delete prefs[k];
+  }
+
   // "a bedroom for each / individual bedrooms" means one bedroom per person, so
   // the configuration should match the household size — NOT a literal small
   // number like the "1" in "1 bedroom for each". This overrides any misparse.
