@@ -100,10 +100,13 @@ function formatRecommendation(match) {
   return {
     id: p.id,
     project_name: p.project_name,
+    developer: p.developer_name || null,
+    area: p.micro_location ? `${p.micro_location}, ${p.location}` : p.location,
     location: p.location,
     configuration: p.bhk || p.configuration || null,
     price_text: p.price_text || null,
     possession_status: p.possession_status || null,
+    is_exact: match.isExact !== false,
     score: match.score,
     relaxation: match.relaxation ?? null,
     why_it_fits: match.explanation.whyItFits,
@@ -170,37 +173,14 @@ const MISSING = {
   possession: "Possession details are not available in my current data.",
 };
 
+// Short framing only — the property details render as cards in the widget.
 function fallbackRecommend(matches, isAlternatives, prefs) {
   const name = firstName(prefs);
-  const lines = [];
-  if (isAlternatives) {
-    // Required opening line stays verbatim, then a warm personal touch.
-    lines.push("I could not find an exact match, but I found close options that may still suit your requirement.");
-    if (name) lines.push(`Here's what I'd recommend for you, ${name}:`);
-  } else {
-    lines.push(
-      name
-        ? `Based on everything you've shared, ${name}, here are options I think could suit you beautifully:`
-        : "Based on what you've shared, here are options that may suit you:"
-    );
-  }
-  for (const m of matches) {
-    const p = m.property;
-    lines.push("");
-    lines.push(`• ${p.project_name} — ${p.location}`);
-    lines.push(`  Configuration: ${p.bhk || p.configuration || "—"}`);
-    lines.push(`  Price: ${p.price_text || MISSING.price}`);
-    lines.push(`  Possession: ${p.possession_status || MISSING.possession}`);
-    lines.push(`  Why it fits: ${m.explanation.whyItFits}`);
-    if (m.explanation.bestFor) lines.push(`  ${m.explanation.bestFor}`);
-  }
-  lines.push("");
-  lines.push(
-    name
-      ? `Would you like me to arrange a site visit or a callback from The Guardians team, ${name}?`
-      : "Would you like to schedule a site visit or a callback from The Guardians team?"
-  );
-  return lines.join("\n");
+  const who = name ? `, ${name}` : "";
+  const opener = isAlternatives
+    ? "I could not find an exact match, but I found close options that may still suit your requirement."
+    : `Here are a few options that look like a strong fit${who}:`;
+  return `${opener}\n\nWould you like me to arrange a site visit or a callback from our team?`;
 }
 
 // ---- main loop -------------------------------------------------------------

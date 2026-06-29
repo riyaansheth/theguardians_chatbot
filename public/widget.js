@@ -82,11 +82,55 @@
 
   function scrollDown() { messagesEl.scrollTop = messagesEl.scrollHeight; }
 
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c];
+    });
+  }
+
+  // Light, safe formatting for bot text: **bold**, *italic*, and line breaks.
+  function renderRich(text) {
+    return esc(text)
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>")
+      .replace(/\n/g, "<br>");
+  }
+
   function addMessage(text, who) {
     var el = document.createElement("div");
     el.className = "tg-msg " + (who === "user" ? "user" : "bot");
-    el.textContent = text;
+    if (who === "user") el.textContent = text;
+    else el.innerHTML = renderRich(text);
     messagesEl.appendChild(el);
+    scrollDown();
+  }
+
+  function cap(s) {
+    s = String(s || "");
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  }
+
+  // A polished property card rendered from structured data (prices are real).
+  function addCard(rec) {
+    var card = document.createElement("div");
+    card.className = "tg-card";
+    var badge = rec.is_exact === false ? '<span class="tg-card-badge">Close option</span>' : "";
+    var pills = "";
+    if (rec.configuration) pills += '<span class="tg-pill">' + esc(rec.configuration) + "</span>";
+    if (rec.possession_status) pills += '<span class="tg-pill ghost">' + esc(cap(rec.possession_status)) + "</span>";
+    card.innerHTML =
+      '<div class="tg-card-head"><span class="tg-card-name">' + esc(rec.project_name) + "</span>" + badge + "</div>" +
+      '<div class="tg-card-area">' +
+      '<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1112 6.5a2.5 2.5 0 010 5z"/></svg> ' +
+      esc(rec.area || rec.location || "") + "</div>" +
+      '<div class="tg-card-pills">' + pills + "</div>" +
+      '<div class="tg-card-price">' + esc(rec.price_text || "Price on request") + "</div>" +
+      (rec.why_it_fits ? '<div class="tg-card-why">' + esc(rec.why_it_fits) + "</div>" : "") +
+      '<button class="tg-card-btn" type="button">Book a site visit</button>';
+    card.querySelector(".tg-card-btn").addEventListener("click", function () {
+      send("I'd like to book a site visit for " + rec.project_name + ".");
+    });
+    messagesEl.appendChild(card);
     scrollDown();
   }
 
@@ -166,6 +210,9 @@
       .then(function (data) {
         typing.remove();
         addMessage(data && data.reply ? data.reply : "Sorry, something went wrong. Please try again.", "bot");
+        if (data && data.recommendations && data.recommendations.length) {
+          data.recommendations.forEach(addCard);
+        }
       })
       .catch(function () {
         typing.remove();

@@ -108,6 +108,39 @@
 }
 .tg-chip:hover { background: #c9a44c; color: #2a1d00; }
 
+/* Property cards */
+.tg-card {
+  align-self: stretch;
+  background: #fff;
+  border: 1px solid #e6e9ee;
+  border-radius: 14px;
+  padding: 14px 15px;
+  box-shadow: 0 4px 14px rgba(10, 34, 64, 0.07);
+  border-top: 3px solid #c9a44c;
+}
+.tg-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tg-card-name { font-weight: 700; font-size: 15px; color: #0f2c4d; }
+.tg-card-badge {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: #8a6d1f; background: #f6eccf; border-radius: 999px; padding: 3px 8px; white-space: nowrap;
+}
+.tg-card-area { display: flex; align-items: center; gap: 4px; color: #6b7686; font-size: 12.5px; margin: 4px 0 9px; }
+.tg-card-area svg { color: #c9a44c; flex: none; }
+.tg-card-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
+.tg-pill {
+  font-size: 11.5px; font-weight: 600; color: #0f2c4d;
+  background: #eef2f7; border-radius: 6px; padding: 3px 9px;
+}
+.tg-pill.ghost { background: transparent; border: 1px solid #d8dee6; color: #5b6b7b; }
+.tg-card-price { font-size: 16px; font-weight: 700; color: #0f2c4d; margin-bottom: 6px; }
+.tg-card-why { font-size: 12.5px; color: #6b7686; line-height: 1.45; margin-bottom: 12px; }
+.tg-card-btn {
+  width: 100%; border: none; cursor: pointer;
+  background: linear-gradient(135deg, #0f2c4d, #1c4d80); color: #fff;
+  font-weight: 600; font-size: 13px; border-radius: 9px; padding: 9px;
+}
+.tg-card-btn:hover { background: linear-gradient(135deg, #0a2240, #163e69); }
+
 .tg-messages {
   flex: 1;
   overflow-y: auto;
