@@ -30,7 +30,16 @@ export function findExactMatches(prefs, props) {
 // options: exact matches (>=70) plus the closest near-misses to top up, each
 // tagged isExact. Falls back to best-available when nothing is exact.
 export function findRecommendations(prefs, props, limit = 3) {
-  const ranked = rankProperties(prefs, props);
+  // Respect an explicitly requested type — never show commercial for a
+  // residential request (or vice versa). If we hold none of that type, return
+  // nothing so the caller can say so honestly.
+  let base = props;
+  if (prefs.property_type) {
+    const t = String(prefs.property_type).toLowerCase();
+    base = props.filter((p) => String(p.property_type).toLowerCase() === t);
+  }
+  const ranked = rankProperties(prefs, base);
+  if (!ranked.length) return { isAlternatives: true, matches: [] };
 
   // If the customer named a location, only offer same/nearby-area properties, so
   // we never pad the list with a far-flung area (e.g. Powai for a Worli request).

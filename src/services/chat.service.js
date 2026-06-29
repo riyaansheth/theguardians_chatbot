@@ -375,7 +375,14 @@ export async function handleChat({ sessionId, message, pageUrl }) {
     const prevIds = Array.isArray(prefs._rec_ids) ? prefs._rec_ids : null;
     const sameSet = prevIds && prevIds.length === ids.length && prevIds.every((v, i) => v === ids[i]);
 
-    if (sameSet) {
+    if (!matches.length) {
+      // Nothing of the requested type/area — be honest rather than show a wrong fit.
+      mode = "none";
+      const who = firstName(prefs) ? `, ${firstName(prefs)}` : "";
+      const typ = prefs.property_type ? `${prefs.property_type} ` : "";
+      const area = prefs.preferred_location ? ` in ${prefs.preferred_location}` : "";
+      reply = `I'm sorry${who} — I don't currently have any ${typ}options${area} in my list. Would you like me to look at a nearby area, consider a different option, or have one of our advisors reach out with more?`;
+    } else if (sameSet) {
       // Already shown these options — don't re-dump cards. Continue the
       // conversation: answer questions about them, handle a visit, thanks, etc.
       mode = "followup";
