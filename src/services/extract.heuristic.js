@@ -79,6 +79,16 @@ export function extractHeuristic(message, pendingSlot, prefs) {
     out.has_children = false;
   }
 
+  // Explicit mentions of WHO is staying (e.g. "me, my wife, my parents and my child").
+  const mentionsParents = /\b(my|our|with|including|and)\s+(parents|mom|dad|mum|mother|father|in-?laws)\b/.test(low) || /\bparents\b.*\b(stay|staying|will|are|with us)\b/.test(low);
+  if (mentionsParents && !/\bno\s+parents\b/.test(low) && !/\bwithout\s+parents\b/.test(low)) {
+    out.has_parents = true;
+  }
+  const mentionsKids = /\b(my|our|a|one|two|three|\d+)\s+(kid|kids|child|children|son|sons|daughter|daughters)\b/.test(low) || /\b(have|with|got)\s+(a\s+)?(kid|kids|child|children)\b/.test(low);
+  if (mentionsKids && !/\bno\s+(kid|kids|child|children)\b/.test(low) && !/\bwithout\s+(kid|kids|child|children)\b/.test(low)) {
+    out.has_children = true;
+  }
+
   if (/cr|crore|lakh|lac|budget|₹|rs\.?|price|\bcrore\b/.test(low)) {
     const b = parseBudgetRange(text);
     if (b) {

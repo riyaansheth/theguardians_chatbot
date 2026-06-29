@@ -288,7 +288,9 @@ export async function handleChat({ sessionId, message, pageUrl }) {
     /\b\d+(?:\.\d+)?\s*(?:crores?|cr|lakhs?|lacs?|k)\b/.test(userSaid) ||
     /₹\s*\d/.test(userSaid) ||
     /\bbudget\b/.test(userSaid);
-  if (!mentionedMoney) {
+  // Drop a budget only if it wasn't really stated — UNLESS the customer is
+  // directly answering the budget question (then a bare number is their budget).
+  if (!mentionedMoney && pendingSlot !== "budget_min") {
     delete prefs.budget_min;
     delete prefs.budget_max;
   }
