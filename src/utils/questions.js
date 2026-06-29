@@ -1,8 +1,9 @@
 // Deterministic slot-filling order. The LLM never decides what to ask next.
 
+// Requirements first, contact details last — a more natural, higher-converting
+// flow than demanding a phone number up front.
 export const QUESTION_ORDER = [
   ["name", "May I know your name?"],
-  ["phone", "Could you share a phone number where The Guardians can reach you?"],
   ["purpose", "Are you looking at this for self-use, investment, or both?"],
   ["property_type", "Are you looking for residential or commercial?"],
   ["family_members", "How many family members would be staying here?"],
@@ -11,6 +12,7 @@ export const QUESTION_ORDER = [
   ["preferred_location", "Which area or location do you prefer?"],
   ["budget_min", "What budget range are you working with?"],
   ["bhk", "What configuration are you after — 1, 2, or 3 BHK?"],
+  ["phone", "Lastly, a phone number so The Guardians can share matching options and arrange a visit?"],
 ];
 
 // Slots that must be present before we recommend anything.

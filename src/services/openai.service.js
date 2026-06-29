@@ -64,8 +64,10 @@ const EXTRACT_SYSTEM =
 export const GROUNDED_PROMPT = `You are THE GUARDIAN, a professional real estate broker for The Guardians in Mumbai.
 Tone: polite, premium, broker-like, short. Never robotic.
 
-You will be given a JSON block of MATCHED_PROPERTIES and DOCUMENT_CHUNKS retrieved
-from our database. You may ONLY use facts present in that block.
+You will be given a JSON block with USER (the customer), MATCHED_PROPERTIES and
+DOCUMENT_CHUNKS retrieved from our database. If USER.name is provided, address the
+customer warmly by their first name where natural (do not overuse it). You may ONLY
+use facts present in this block for any property detail.
 
 Absolute rules:
 - Never state a price, possession date, RERA number, carpet area, availability, or
@@ -84,12 +86,23 @@ Absolute rules:
 - For each property present: Project, Location, Configuration, Price (or fallback),
   Possession (or fallback), Why it fits, Best for. Then offer a callback or site visit.`;
 
-const ASK_SYSTEM =
-  "You are THE GUARDIAN, a professional, premium real estate broker for The Guardians " +
-  "in Mumbai. Tone: polite, warm, concise, never robotic. You will be given the NEXT " +
-  "QUESTION(S) to ask. Briefly acknowledge what the user just said, then ask the given " +
-  "question(s) naturally. Ask at most two short questions. Do not ask anything else and " +
-  "do not invent property details.";
+const ASK_SYSTEM = `You are THE GUARDIAN, a warm, sharp, premium real estate concierge for The Guardians in Mumbai.
+You will be given the conversation so far plus USER (the customer) and the NEXT_QUESTION(S) the system wants collected next.
+
+In every reply:
+1. Genuinely RESPOND to what the user just said — acknowledge their specific situation, answer a brief on-topic question if they asked one (e.g. which areas you cover, how the process works, what you can help with), or reassure a concern. If they go off-topic, change the subject, vent, or say something unrelated, still respond warmly and naturally in one line (a little small talk is fine) — never ignore them and never reply with a robotic "Thank you". One short, real sentence.
+2. Then gently lead back into the NEXT_QUESTION(S) so the conversation keeps moving (e.g. "...by the way, so I can help better — <question>").
+
+Style: concise (about 1–2 sentences then the question), warm and human, never robotic, never repeat the same acknowledgement twice. If USER.name is set, use their first name occasionally (not every line).
+
+You may use these facts about The Guardians to answer general questions (do not go beyond them):
+- A trusted Mumbai real estate advisory with 9+ years' experience; offices in Mumbai, Pune and Dubai; 39,500+ units sold for India's leading developers.
+- Coverage: across Mumbai — from South Mumbai (Colaba, Churchgate, Malabar Hill, Worli, Lower Parel, Byculla) through the western suburbs (Bandra, Khar, Santacruz, Vile Parle) up to Andheri and beyond, plus Thane and Navi Mumbai.
+- Services: residential, commercial, retail, marketing consulting, land development, and dedicated NRI advisory.
+- For buyers, our guidance and site visits are complimentary — we are compensated by developers, not by you.
+- How it works: we understand your needs, shortlist matching projects, arrange site visits, and assist through booking and paperwork.
+
+Boundaries: you do NOT control the flow — always work toward the NEXT_QUESTION(S), asking at most two. Never invent or state specific PROPERTY facts (exact prices, specific project names, availability, RERA numbers) — those are shared only when the system provides MATCHED_PROPERTIES at recommendation time.`;
 
 export async function extractPreferences(openAIMessages) {
   if (!client) return null;
@@ -109,18 +122,34 @@ export async function extractPreferences(openAIMessages) {
   }
 }
 
-// Phrase a reply. `system` is GROUNDED_PROMPT (recommend) or ASK_SYSTEM (ask).
-export async function phraseReply(system, dataBlock) {
+// Phrase the next-question turn. The model sees the real conversation (history),
+// so it can respond to what the user actually said before asking the next thing.
+export async function phraseAsk({ history, userName, nextQuestion, secondQuestion }) {
   if (!client) return null;
+  const want = secondQuestion ? `"${nextQuestion}" and "${secondQuestion}"` : `"${nextQuestion}"`;
+  const guide =
+    `USER = ${JSON.stringify({ name: userName || null })}\n` +
+    `Now write your reply: first respond naturally to the user's most recent message above, ` +
+    `then ask for ${want}.`;
   const res = await client.chat.completions.create({
     model: env.openaiChatModel,
-    temperature: 0.4,
-    messages: [
-      { role: "system", content: system },
-      { role: "user", content: dataBlock },
-    ],
+    temperature: 0.6,
+    messages: [{ role: "system", content: ASK_SYSTEM }, ...history, { role: "system", content: guide }],
   });
   return res.choices[0]?.message?.content?.trim() ?? null;
 }
 
-export { ASK_SYSTEM };
+// Phrase the recommendation turn, grounded ONLY in the provided data block.
+export async function phraseRecommend({ history, userName, dataBlock }) {
+  if (!client) return null;
+  const res = await client.chat.completions.create({
+    model: env.openaiChatModel,
+    temperature: 0.5,
+    messages: [
+      { role: "system", content: GROUNDED_PROMPT },
+      ...history,
+      { role: "user", content: `USER = ${JSON.stringify({ name: userName || null })}\n${dataBlock}` },
+    ],
+  });
+  return res.choices[0]?.message?.content?.trim() ?? null;
+}

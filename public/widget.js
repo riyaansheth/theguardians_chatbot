@@ -24,19 +24,10 @@
     });
   }
 
-  var SESSION_KEY = "tg_session_id";
+  // A fresh session per page load, so refreshing the browser restarts the chat.
+  var SESSION_ID = uuid();
   function sessionId() {
-    var id = null;
-    try {
-      id = localStorage.getItem(SESSION_KEY);
-      if (!id) {
-        id = uuid();
-        localStorage.setItem(SESSION_KEY, id);
-      }
-    } catch (e) {
-      id = id || uuid(); // localStorage blocked (private mode) — ephemeral id
-    }
-    return id;
+    return SESSION_ID;
   }
 
   // ---- build DOM inside a shadow root ----
@@ -57,9 +48,13 @@
       '<div class="tg-header">' +
         '<div><div class="tg-title">' + botName + "</div>" +
         '<div class="tg-sub">Real estate concierge</div></div>' +
-        '<button class="tg-close" aria-label="Close">&times;</button>' +
+        '<div class="tg-actions">' +
+          '<button class="tg-restart" aria-label="Start over" title="Start over">&#10227;</button>' +
+          '<button class="tg-close" aria-label="Close">&times;</button>' +
+        "</div>" +
       "</div>" +
       '<div class="tg-messages"></div>' +
+      '<div class="tg-suggestions"></div>' +
       '<form class="tg-input">' +
         '<input type="text" autocomplete="off" placeholder="Type your message…" aria-label="Message" />' +
         "<button type=\"submit\">Send</button>" +
@@ -77,6 +72,10 @@
   var form = root.querySelector(".tg-input");
   var input = form.querySelector("input");
   var sendBtn = form.querySelector("button");
+  var restartBtn = root.querySelector(".tg-restart");
+  var suggestionsEl = root.querySelector(".tg-suggestions");
+
+  var STARTERS = ["2 BHK in Bandra", "Sea-facing 3 BHK in Worli", "Ready homes in Andheri"];
 
   var opened = false;
   var greeted = false;
@@ -100,6 +99,20 @@
     return t;
   }
 
+  function clearSuggestions() { suggestionsEl.innerHTML = ""; }
+
+  function renderSuggestions() {
+    clearSuggestions();
+    STARTERS.forEach(function (text) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "tg-chip";
+      b.textContent = text;
+      b.addEventListener("click", function () { send(text); });
+      suggestionsEl.appendChild(b);
+    });
+  }
+
   function openPanel() {
     opened = true;
     root.classList.add("tg-open");
@@ -110,6 +123,7 @@
         "Hello, and welcome to The Guardians. I'd be glad to help you find the right home. May I know your name?",
         "bot"
       );
+      renderSuggestions();
     }
   }
   function closePanel() {
@@ -117,12 +131,23 @@
     root.classList.remove("tg-open");
   }
 
+  // Start a brand-new conversation (new session, cleared transcript).
+  function restartChat() {
+    SESSION_ID = uuid();
+    messagesEl.innerHTML = "";
+    clearSuggestions();
+    greeted = false;
+    openPanel();
+  }
+
   launcher.addEventListener("click", function () {
     opened ? closePanel() : openPanel();
   });
   closeBtn.addEventListener("click", closePanel);
+  restartBtn.addEventListener("click", restartChat);
 
   function send(text) {
+    clearSuggestions();
     addMessage(text, "user");
     input.value = "";
     sendBtn.disabled = true;
@@ -157,4 +182,7 @@
     var text = input.value.trim();
     if (text) send(text);
   });
+
+  // Let host-page buttons drive the widget (e.g. "Talk to our concierge").
+  window.TheGuardianBot = { open: openPanel, close: closePanel, restart: restartChat };
 })();

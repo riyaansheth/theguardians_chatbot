@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The Guardians Real Estate Advisory — Mumbai</title>
+  <meta name="description" content="The Guardians Real Estate Advisory — India's trusted real estate consulting firm. Residential, commercial, retail, marketing and land advisory across Mumbai." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy: #0a2240;
+      --navy-2: #0f2c4d;
+      --navy-3: #14203a;
+      --gold: #c9a44c;
+      --gold-2: #e3c878;
+      --ink: #1a2230;
+      --paper: #f6f4ef;
+      --muted: #6b7686;
+      --line: rgba(255, 255, 255, 0.14);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: "Inter", system-ui, sans-serif; color: var(--ink); background: #fff; line-height: 1.6; }
+    h1, h2, h3, .serif { font-family: "Playfair Display", Georgia, serif; }
+    a { color: inherit; text-decoration: none; }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+    .gold { color: var(--gold); }
+    .eyebrow { letter-spacing: 0.22em; text-transform: uppercase; font-size: 12px; font-weight: 600; color: var(--gold); }
+
+    /* Top bar */
+    .topbar { background: var(--navy-3); color: #cdd6e4; font-size: 12.5px; }
+    .topbar .wrap { display: flex; justify-content: space-between; align-items: center; height: 38px; }
+    .topbar a:hover { color: #fff; }
+    .topbar .social a { margin-left: 14px; opacity: 0.85; }
+
+    /* Nav */
+    header.nav { position: sticky; top: 0; z-index: 100; background: rgba(10, 34, 64, 0.96); backdrop-filter: blur(8px); color: #fff; border-bottom: 1px solid var(--line); }
+    .nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 76px; }
+    .brand { display: flex; flex-direction: column; line-height: 1.05; }
+    .brand .name { font-family: "Playfair Display", serif; font-weight: 700; font-size: 22px; letter-spacing: 0.06em; }
+    .brand .name b { color: var(--gold); font-weight: 700; }
+    .brand .sub { font-size: 10px; letter-spacing: 0.34em; color: #aeb9cb; text-transform: uppercase; margin-top: 2px; }
+    nav.menu { display: flex; gap: 26px; align-items: center; }
+    nav.menu a { font-size: 14px; color: #dde4ee; font-weight: 500; }
+    nav.menu a:hover { color: var(--gold-2); }
+    .btn { display: inline-block; border-radius: 999px; padding: 11px 22px; font-weight: 600; font-size: 14px; cursor: pointer; border: 1px solid transparent; transition: transform .12s ease, box-shadow .2s ease; }
+    .btn-gold { background: linear-gradient(135deg, var(--gold), var(--gold-2)); color: #2a1d00; box-shadow: 0 6px 18px rgba(201, 164, 76, 0.35); }
+    .btn-gold:hover { transform: translateY(-1px); }
+    .btn-ghost { background: transparent; color: #fff; border-color: rgba(255,255,255,0.4); }
+    .btn-ghost:hover { border-color: var(--gold); color: var(--gold-2); }
+    .nav-toggle { display: none; background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; }
+
+    /* Hero */
+    .hero { position: relative; color: #fff; background:
+        radial-gradient(1200px 600px at 80% -10%, rgba(201,164,76,0.22), transparent 60%),
+        radial-gradient(900px 500px at 0% 110%, rgba(201,164,76,0.10), transparent 55%),
+        linear-gradient(160deg, #0a2240 0%, #0f2c4d 55%, #14233f 100%); }
+    .hero::after { content: ""; position: absolute; inset: 0; background-image:
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 64px),
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 64px);
+        mask-image: linear-gradient(to bottom, transparent, #000 40%); pointer-events: none; }
+    .hero .wrap { position: relative; z-index: 1; padding: 92px 24px 96px; }
+    .hero h1 { font-size: clamp(36px, 5.4vw, 64px); line-height: 1.05; font-weight: 700; max-width: 16ch; margin: 18px 0 18px; }
+    .hero h1 em { font-style: normal; color: var(--gold-2); }
+    .hero p.lede { font-size: clamp(16px, 1.7vw, 19px); color: #d4dcea; max-width: 56ch; font-weight: 300; }
+    .hero .cta { display: flex; gap: 14px; margin-top: 32px; flex-wrap: wrap; }
+
+    /* Metrics */
+    .metrics { background: var(--navy-2); color: #fff; border-top: 1px solid var(--line); }
+    .metrics .grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+    .metric { padding: 36px 18px; text-align: center; border-right: 1px solid var(--line); }
+    .metric:last-child { border-right: none; }
+    .metric .num { font-family: "Playfair Display", serif; font-size: clamp(28px, 3.4vw, 42px); color: var(--gold-2); font-weight: 700; }
+    .metric .lbl { font-size: 13px; letter-spacing: 0.06em; color: #b9c4d6; margin-top: 6px; text-transform: uppercase; }
+
+    section.block { padding: 84px 0; }
+    .section-head { text-align: center; max-width: 720px; margin: 0 auto 48px; }
+    .section-head h2 { font-size: clamp(28px, 3.6vw, 40px); color: var(--navy); margin: 10px 0 12px; }
+    .section-head p { color: var(--muted); font-size: 16px; }
+
+    /* About */
+    .about { background: var(--paper); }
+    .about .cols { display: grid; grid-template-columns: 1.1fr 1fr; gap: 56px; align-items: center; }
+    .about h2 { font-size: clamp(28px, 3.4vw, 38px); color: var(--navy); margin: 12px 0 16px; }
+    .about p { color: #45505f; margin-bottom: 14px; }
+    .about .panel { background: linear-gradient(160deg, #0a2240, #14233f); border-radius: 18px; padding: 34px; color: #fff; box-shadow: 0 24px 60px rgba(10,34,64,0.25); }
+    .about .panel ul { list-style: none; }
+    .about .panel li { padding: 12px 0; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: flex-start; }
+    .about .panel li:last-child { border-bottom: none; }
+    .about .panel li .tick { color: var(--gold-2); font-weight: 700; }
+
+    /* Services */
+    .services .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+    .svc { border: 1px solid #ececec; border-radius: 16px; padding: 30px; transition: transform .15s ease, box-shadow .2s ease, border-color .2s; background: #fff; }
+    .svc:hover { transform: translateY(-4px); box-shadow: 0 18px 40px rgba(10,34,64,0.10); border-color: #e6dcc2; }
+    .svc .ico { width: 50px; height: 50px; border-radius: 12px; display: grid; place-items: center; font-size: 24px; background: linear-gradient(135deg, rgba(201,164,76,0.15), rgba(201,164,76,0.05)); margin-bottom: 16px; }
+    .svc h3 { font-size: 20px; color: var(--navy); margin-bottom: 8px; }
+    .svc p { color: var(--muted); font-size: 14.5px; }
+
+    /* Projects */
+    .projects { background: var(--paper); }
+    .projects .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .pcard { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(10,34,64,0.08); display: flex; flex-direction: column; }
+    .pcard .ph { height: 168px; position: relative; color: #fff; display: flex; align-items: flex-end; padding: 16px; font-family: "Playfair Display", serif; font-size: 22px; font-weight: 600; }
+    .pcard .ph .tag { position: absolute; top: 14px; left: 14px; background: rgba(201,164,76,0.95); color: #2a1d00; font-family: "Inter"; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; padding: 4px 10px; border-radius: 999px; text-transform: uppercase; }
+    .pcard .body { padding: 18px 20px 22px; flex: 1; display: flex; flex-direction: column; }
+    .pcard .meta { color: var(--muted); font-size: 14px; margin: 4px 0 16px; }
+    .pcard .meta b { color: var(--navy); font-weight: 600; }
+    .pcard .row { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
+    .pcard .price { font-weight: 700; color: var(--navy); }
+    .ph-1 { background: linear-gradient(135deg, #20406e, #0a2240); }
+    .ph-2 { background: linear-gradient(135deg, #1d6b63, #0d3b3a); }
+    .ph-3 { background: linear-gradient(135deg, #6e4a20, #3a2410); }
+    .ph-4 { background: linear-gradient(135deg, #3a2c66, #1a163a); }
+    .ph-5 { background: linear-gradient(135deg, #6e2040, #3a1024); }
+    .link-gold { color: var(--gold); font-weight: 600; font-size: 14px; cursor: pointer; }
+    .link-gold:hover { text-decoration: underline; }
+
+    /* Clients */
+    .clients { text-align: center; }
+    .logos { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-top: 8px; }
+    .logos span { border: 1px solid #e7e2d4; border-radius: 999px; padding: 10px 18px; font-weight: 600; color: #51607a; font-size: 14px; background: #fbfaf6; }
+
+    /* Contact */
+    .contact { background: linear-gradient(160deg, #0a2240, #14233f); color: #fff; }
+    .contact .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+    .contact h2 { font-size: clamp(28px, 3.4vw, 40px); margin-bottom: 14px; }
+    .contact p { color: #cdd6e4; }
+    .contact .info { margin-top: 22px; display: grid; gap: 14px; }
+    .contact .info div { display: flex; gap: 12px; align-items: flex-start; }
+    .contact .info .k { color: var(--gold-2); font-weight: 600; min-width: 84px; }
+    .ccard { background: rgba(255,255,255,0.04); border: 1px solid var(--line); border-radius: 18px; padding: 30px; }
+    .ccard label { display: block; font-size: 13px; color: #b9c4d6; margin: 12px 0 6px; }
+    .ccard input, .ccard textarea { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; color: #fff; font-family: inherit; font-size: 14px; }
+    .ccard input::placeholder, .ccard textarea::placeholder { color: #8b97aa; }
+
+    /* Footer */
+    footer { background: #07182e; color: #9fb0c6; font-size: 14px; }
+    footer .wrap { padding: 40px 24px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 20px; align-items: center; }
+    footer .rera { font-size: 12.5px; color: #7e8ea6; margin-top: 6px; }
+    footer a:hover { color: var(--gold-2); }
+    .foot-links a { margin-left: 18px; }
+
+    @media (max-width: 860px) {
+      nav.menu { display: none; }
+      .nav-toggle { display: block; }
+      .metrics .grid { grid-template-columns: repeat(2, 1fr); }
+      .metric:nth-child(2) { border-right: none; }
+      .about .cols, .contact .cols { grid-template-columns: 1fr; gap: 28px; }
+      .services .grid, .projects .grid { grid-template-columns: 1fr; }
+      .foot-links a { margin: 0 12px 0 0; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="wrap">
+      <div>📞 <a href="tel:9152420242">+91 91524 20242</a> &nbsp;·&nbsp; ONE BKC, Bandra (E), Mumbai</div>
+      <div class="social">
+        <a href="#">Facebook</a><a href="#">Instagram</a><a href="#">LinkedIn</a><a href="#">YouTube</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <header class="nav">
+    <div class="wrap">
+      <a class="brand" href="#top">
+        <span class="name">THE <b>GUARDIANS</b></span>
+        <span class="sub">Real Estate Advisory</span>
+      </a>
+      <nav class="menu">
+        <a href="#home">Home</a>
+        <a href="#about">About Us</a>
+        <a href="#services">Services</a>
+        <a href="#projects">Our Work</a>
+        <a href="#clients">Clients</a>
+        <a href="#contact">Contact Us</a>
+      </nav>
+      <button class="btn btn-gold" onclick="openGuardian()">Talk to our concierge</button>
+      <button class="nav-toggle" onclick="openGuardian()">☰</button>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero" id="home" name="top">
+    <div class="wrap">
+      <span class="eyebrow">9 Years of Trust · Mumbai · Pune · Dubai</span>
+      <h1>Find the <em>right address</em>, with India's most trusted advisory.</h1>
+      <p class="lede">From sea-facing homes in South Mumbai to landmark towers across the western suburbs — our advisors match you to the right project, the right configuration, and the right price. Honest guidance, end to end.</p>
+      <div class="cta">
+        <button class="btn btn-gold" onclick="openGuardian()">Chat with our concierge</button>
+        <a class="btn btn-ghost" href="#projects">Explore projects</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Metrics -->
+  <div class="metrics">
+    <div class="wrap">
+      <div class="grid">
+        <div class="metric"><div class="num">335+</div><div class="lbl">Project Launches</div></div>
+        <div class="metric"><div class="num">39,523</div><div class="lbl">Units Sold</div></div>
+        <div class="metric"><div class="num">₹52,565 Cr</div><div class="lbl">Inventory Sold</div></div>
+        <div class="metric"><div class="num">800+</div><div class="lbl">Advisory Experts</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- About -->
+  <section class="block about" id="about">
+    <div class="wrap cols">
+      <div>
+        <span class="eyebrow">Who we are</span>
+        <h2>One of India's fastest-growing real estate advisories.</h2>
+        <p>The Guardians Real Estate Advisory partners with homebuyers and investors across Mumbai to make property decisions with clarity and confidence. We represent the city's most respected developers and bring full-spectrum services under one roof.</p>
+        <p>Our promise is simple: data-led advice, transparent options, and a concierge who stays with you from the first conversation to the final handover.</p>
+      </div>
+      <div class="panel">
+        <span class="eyebrow">The Guardians edge</span>
+        <ul>
+          <li><span class="tick">✦</span><span>Curated inventory across South Mumbai to the western suburbs</span></li>
+          <li><span class="tick">✦</span><span>RERA-aware, transparent pricing and documentation</span></li>
+          <li><span class="tick">✦</span><span>Dedicated advisors for self-use and investment buyers</span></li>
+          <li><span class="tick">✦</span><span>Site visits, callbacks and after-sales support</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Services -->
+  <section class="block services" id="services">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">What we do</span>
+        <h2>Full-spectrum real estate advisory</h2>
+        <p>Five practice areas, one trusted team — guiding every kind of property decision in Mumbai.</p>
+      </div>
+      <div class="grid">
+        <div class="svc"><div class="ico">🏠</div><h3>Residential</h3><p>Apartments, villas and luxury homes matched to your family, budget and location.</p></div>
+        <div class="svc"><div class="ico">🏢</div><h3>Commercial</h3><p>Offices and workspaces in Mumbai's prime business districts.</p></div>
+        <div class="svc"><div class="ico">🛍️</div><h3>Retail</h3><p>High-street and mall retail spaces with strong footfall and visibility.</p></div>
+        <div class="svc"><div class="ico">📈</div><h3>Marketing Consulting</h3><p>Go-to-market strategy and sales support for developers and projects.</p></div>
+        <div class="svc"><div class="ico">🌆</div><h3>Land Development</h3><p>Advisory on land acquisition, joint ventures and development potential.</p></div>
+        <div class="svc"><div class="ico">🌍</div><h3>NRI Corner</h3><p>End-to-end guidance for NRI buyers investing in Mumbai real estate.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Projects -->
+  <section class="block projects" id="projects">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Our work</span>
+        <h2>Featured ongoing projects</h2>
+        <p>A glimpse of landmark developments our advisors are currently representing.</p>
+      </div>
+      <div class="grid">
+        <div class="pcard">
+          <div class="ph ph-1"><span class="tag">Byculla</span>Monte South</div>
+          <div class="body"><div class="meta"><b>2 – 3.5 BHK</b> · Byculla, South Mumbai</div>
+            <div class="row"><span class="price">Price on request</span><span class="link-gold" onclick="openGuardian()">Enquire →</span></div></div>
+        </div>
+        <div class="pcard">
+          <div class="ph ph-2"><span class="tag">Thane</span>Sunbeam Heights</div>
+          <div class="body"><div class="meta"><b>3 & 4 BHK</b> · Thane</div>
+            <div class="row"><span class="price">Price on request</span><span class="link-gold" onclick="openGuardian()">Enquire →</span></div></div>
+        </div>
+        <div class="pcard">
+          <div class="ph ph-3"><span class="tag">Borivali</span>Rivali Park</div>
+          <div class="body"><div class="meta"><b>2 & 3 BHK</b> · Borivali</div>
+            <div class="row"><span class="price">Price on request</span><span class="link-gold" onclick="openGuardian()">Enquire →</span></div></div>
+        </div>
+        <div class="pcard">
+          <div class="ph ph-4"><span class="tag">BKC</span>Dosti Mumbai</div>
+          <div class="body"><div class="meta"><b>1 & 2 BHK</b> · Bandra Kurla Complex</div>
+            <div class="row"><span class="price">Price on request</span><span class="link-gold" onclick="openGuardian()">Enquire →</span></div></div>
+        </div>
+        <div class="pcard">
+          <div class="ph ph-5"><span class="tag">BKC</span>The Presidential</div>
+          <div class="body"><div class="meta"><b>Luxury Suites</b> · Bandra Kurla Complex</div>
+            <div class="row"><span class="price">Price on request</span><span class="link-gold" onclick="openGuardian()">Enquire →</span></div></div>
+        </div>
+        <div class="pcard">
+          <div class="ph ph-1"><span class="tag">Worli</span>Sea-facing Homes</div>
+          <div class="body"><div class="meta"><b>2 – 4 BHK</b> · Worli Sea Face</div>
+            <div class="row"><span class="price">Price on request</span><span class="link-gold" onclick="openGuardian()">Enquire →</span></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Clients -->
+  <section class="block clients" id="clients">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Trusted by</span>
+        <h2>India's leading developers</h2>
+        <p>We've helped 39,523+ families and investors find their address with the city's most respected names.</p>
+      </div>
+      <div class="logos">
+        <span>Lodha</span><span>Oberoi Realty</span><span>Godrej Properties</span><span>Rustomjee</span>
+        <span>Kalpataru</span><span>Piramal Realty</span><span>K Raheja Corp</span><span>Hiranandani</span>
+        <span>Wadhwa Group</span><span>Sunteck</span><span>Runwal</span><span>L&T Realty</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section class="block contact" id="contact">
+    <div class="wrap cols">
+      <div>
+        <span class="eyebrow">Say hello</span>
+        <h2>Let's find your address.</h2>
+        <p>Talk to a Guardians advisor, or chat with our concierge in the corner — any time, day or night.</p>
+        <div class="info">
+          <div><span class="k">Office</span><span>C-602 &amp; 603, ONE BKC, G Block, Bandra Kurla Complex, Bandra (E), Mumbai 400051</span></div>
+          <div><span class="k">Phone</span><span><a href="tel:9152420242">+91 91524 20242</a></span></div>
+          <div><span class="k">Offices</span><span>Mumbai · Pune · Dubai</span></div>
+        </div>
+      </div>
+      <div class="ccard">
+        <span class="eyebrow">Request a callback</span>
+        <label>Name</label><input placeholder="Your name" />
+        <label>Phone</label><input placeholder="10-digit mobile number" />
+        <label>What are you looking for?</label><textarea rows="3" placeholder="e.g. 2 BHK in Andheri, ready possession, ~3 Cr"></textarea>
+        <div style="margin-top:18px;"><button class="btn btn-gold" onclick="openGuardian()">Chat with concierge instead →</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="wrap">
+      <div>
+        <div class="serif" style="font-size:18px;color:#dce4f0;">THE <span class="gold">GUARDIANS</span></div>
+        <div>The Guardians © 2026 · Real Estate Advisory Pvt. Ltd.</div>
+        <div class="rera">MahaRERA Registration: A041182400807</div>
+      </div>
+      <div class="foot-links">
+        <a href="#">Disclaimer</a><a href="#">Privacy Policy</a><a href="#">Sitemap</a><a href="#contact">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===== Embed: The Guardian chat widget (two lines) ===== -->
+  <script>
+    window.TheGuardianBotConfig = { apiUrl: "/api/chat", botName: "THE GUARDIAN" };
+    function openGuardian() {
+      if (window.TheGuardianBot && window.TheGuardianBot.open) window.TheGuardianBot.open();
+    }
+  </script>
+  <script src="/widget.js"></script>
+  <!-- ====================================================== -->
+</body>
+</html>

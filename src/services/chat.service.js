@@ -4,9 +4,8 @@ import { query } from "../config/db.js";
 import {
   llmAvailable,
   extractPreferences,
-  phraseReply,
-  GROUNDED_PROMPT,
-  ASK_SYSTEM,
+  phraseAsk,
+  phraseRecommend,
 } from "./openai.service.js";
 import { findExactMatches, findAlternativeMatches } from "./matching.service.js";
 import { retrieveChunksForProperties } from "./embedding.service.js";
@@ -112,7 +111,12 @@ function formatRecommendation(match) {
 }
 
 // Build the user-turn data block for the grounded phrasing call.
-function buildRecommendBlock(matches, isAlternatives, documentChunks) {
+// The customer's first name (for personalization), or null.
+function firstName(prefs) {
+  return prefs && prefs.name ? String(prefs.name).trim().split(/\s+/)[0] : null;
+}
+
+function buildRecommendBlock(matches, isAlternatives, documentChunks, name) {
   const matched = matches.map((m) => {
     const p = m.property;
     return {
@@ -127,6 +131,7 @@ function buildRecommendBlock(matches, isAlternatives, documentChunks) {
     };
   });
   return [
+    `USER = ${JSON.stringify({ name: name || null })}`,
     `RESULT_SET = ${isAlternatives ? "ALTERNATIVES" : "EXACT"}`,
     `MATCHED_PROPERTIES = ${JSON.stringify(matched, null, 2)}`,
     `DOCUMENT_CHUNKS = ${JSON.stringify(documentChunks ?? [], null, 2)}`,
@@ -134,10 +139,18 @@ function buildRecommendBlock(matches, isAlternatives, documentChunks) {
 }
 
 // Deterministic fallback phrasing (used when no LLM key is configured).
-function fallbackAsk(next, isFirstTurn) {
-  const opener = isFirstTurn
-    ? "Hello, and welcome to The Guardians. I'd be glad to help you find the right home. "
-    : "Thank you. ";
+// Rotates a few warm acknowledgements so it doesn't read "Thank you" every turn.
+function fallbackAsk(next, isFirstTurn, prefs) {
+  const name = firstName(prefs);
+  let opener;
+  if (isFirstTurn) {
+    opener = "Hello, and welcome to The Guardians. I'd be glad to help you find the right home. ";
+  } else if (name) {
+    const acks = [`Thank you, ${name}. `, `Great, ${name}. `, `Perfect, ${name}. `, `Noted, ${name}. `];
+    opener = acks[next.slot.length % acks.length];
+  } else {
+    opener = "Thank you. ";
+  }
   let q = next.question;
   if (next.secondQuestion) q += ` ${next.secondQuestion}`;
   return opener + q;
@@ -148,13 +161,20 @@ const MISSING = {
   possession: "Possession details are not available in my current data.",
 };
 
-function fallbackRecommend(matches, isAlternatives) {
+function fallbackRecommend(matches, isAlternatives, prefs) {
+  const name = firstName(prefs);
   const lines = [];
-  lines.push(
-    isAlternatives
-      ? "I could not find an exact match, but I found close options that may still suit your requirement."
-      : "Based on what you've shared, here are options that may suit you:"
-  );
+  if (isAlternatives) {
+    // Required opening line stays verbatim, then a warm personal touch.
+    lines.push("I could not find an exact match, but I found close options that may still suit your requirement.");
+    if (name) lines.push(`Here's what I'd recommend for you, ${name}:`);
+  } else {
+    lines.push(
+      name
+        ? `Based on everything you've shared, ${name}, here are options I think could suit you beautifully:`
+        : "Based on what you've shared, here are options that may suit you:"
+    );
+  }
   for (const m of matches) {
     const p = m.property;
     lines.push("");
@@ -166,7 +186,11 @@ function fallbackRecommend(matches, isAlternatives) {
     if (m.explanation.bestFor) lines.push(`  ${m.explanation.bestFor}`);
   }
   lines.push("");
-  lines.push("Would you like to schedule a site visit or a callback from The Guardians team?");
+  lines.push(
+    name
+      ? `Would you like me to arrange a site visit or a callback from The Guardians team, ${name}?`
+      : "Would you like to schedule a site visit or a callback from The Guardians team?"
+  );
   return lines.join("\n");
 }
 
@@ -185,17 +209,29 @@ export async function handleChat({ sessionId, message, pageUrl }) {
 
   await saveMessage(sessionId, "user", message);
 
-  // 3. EXTRACT — LLM as a parser; deterministic fallback when no key.
-  let extracted = null;
+  // Recent conversation in OpenAI format, including this turn — shared by the
+  // extraction and phrasing calls so the model always sees what the user said.
+  const llmHistory = [...toOpenAIHistory(historyBefore), { role: "user", content: message }];
+
+  // 3. EXTRACT — the LLM understands the message; the deterministic heuristic
+  // both backs it up offline and FILLS any slot the LLM left empty (a bare "no",
+  // a single budget figure, an obvious BHK), which makes capture far more robust.
+  let extracted = {};
   if (llmAvailable()) {
     try {
-      const msgs = [...toOpenAIHistory(historyBefore), { role: "user", content: message }];
-      extracted = await extractPreferences(msgs);
+      const llm = await extractPreferences(llmHistory);
+      if (llm && typeof llm === "object") extracted = llm;
     } catch (err) {
-      console.error("[chat] extraction failed, using fallback:", err.message);
+      console.error("[chat] extraction failed, using heuristic:", err.message);
     }
   }
-  if (extracted === null) extracted = extractHeuristic(message, pendingSlot, prefsBefore);
+  const heur = extractHeuristic(message, pendingSlot, prefsBefore);
+  for (const [k, v] of Object.entries(heur)) {
+    const cur = extracted[k];
+    if ((cur === null || cur === undefined || cur === "") && v !== null && v !== undefined && v !== "") {
+      extracted[k] = v;
+    }
+  }
 
   // 4. MERGE + validate, then persist prefs to the lead row.
   const prefs = mergePrefs(prefsBefore, extracted);
@@ -204,6 +240,19 @@ export async function handleChat({ sessionId, message, pageUrl }) {
     else delete prefs.phone; // invalid -> keep asking
   }
   if (prefs.email != null && !isValidEmail(prefs.email)) delete prefs.email;
+
+  // Budget: a single figure (e.g. "around 20 cr") becomes a ceiling with a
+  // sensible floor, so suitable lower-priced homes still qualify as matches.
+  // Explicit ranges ("2.8 to 3.5 cr") are kept exactly as given.
+  const bmin = prefs.budget_min;
+  const bmax = prefs.budget_max;
+  if (bmin == null && bmax != null) prefs.budget_min = Math.round(bmax * 0.6);
+  else if (bmax == null && bmin != null) {
+    prefs.budget_max = bmin;
+    prefs.budget_min = Math.round(bmin * 0.6);
+  } else if (bmin != null && bmax != null && bmin === bmax) {
+    prefs.budget_min = Math.round(bmax * 0.6);
+  }
 
   const leadScore = scoreLead(prefs);
   await upsertLead(sessionId, prefs, leadScore);
@@ -216,10 +265,17 @@ export async function handleChat({ sessionId, message, pageUrl }) {
 
   if (next) {
     mode = "ask";
-    const dataBlock = next.secondQuestion
-      ? `NEXT_QUESTIONS = ["${next.question}", "${next.secondQuestion}"]`
-      : `NEXT_QUESTION = "${next.question}"`;
-    reply = (llmAvailable() && (await safePhrase(ASK_SYSTEM, dataBlock))) || fallbackAsk(next, isFirstTurn);
+    reply =
+      (llmAvailable() &&
+        (await safePhrase(() =>
+          phraseAsk({
+            history: llmHistory,
+            userName: firstName(prefs),
+            nextQuestion: next.question,
+            secondQuestion: next.secondQuestion,
+          })
+        ))) ||
+      fallbackAsk(next, isFirstTurn, prefs);
   } else {
     const allProps = await loadProperties();
     let matches = findExactMatches(prefs, allProps);
@@ -233,10 +289,13 @@ export async function handleChat({ sessionId, message, pageUrl }) {
 
     // DOCUMENT_CHUNKS get populated in Phase 5 (RAG).
     const documentChunks = await retrieveChunks(prefs, matches);
-    const dataBlock = buildRecommendBlock(matches, isAlternatives, documentChunks);
+    const dataBlock = buildRecommendBlock(matches, isAlternatives, documentChunks, firstName(prefs));
     reply =
-      (llmAvailable() && (await safePhrase(GROUNDED_PROMPT, dataBlock))) ||
-      fallbackRecommend(matches, isAlternatives);
+      (llmAvailable() &&
+        (await safePhrase(() =>
+          phraseRecommend({ history: llmHistory, userName: firstName(prefs), dataBlock })
+        ))) ||
+      fallbackRecommend(matches, isAlternatives, prefs);
   }
 
   // 7. Save reply, return.
@@ -244,9 +303,9 @@ export async function handleChat({ sessionId, message, pageUrl }) {
   return { reply, mode, recommendations, leadScore, leadTier: leadTier(leadScore), prefs };
 }
 
-async function safePhrase(system, dataBlock) {
+async function safePhrase(fn) {
   try {
-    return await phraseReply(system, dataBlock);
+    return await fn();
   } catch (err) {
     console.error("[chat] phrasing failed, using fallback:", err.message);
     return null;

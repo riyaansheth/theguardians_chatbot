@@ -35,8 +35,8 @@ app.use(express.json());
 // Static assets (widget, test host page) — populated in Phase 6.
 app.use(express.static("public"));
 
-// Health check.
-app.get("/", (req, res) => {
+// Health check. (The demo homepage at / is served from public/index.html.)
+app.get("/health", (req, res) => {
   res.json({ status: "ok", name: "THE GUARDIAN" });
 });
 
