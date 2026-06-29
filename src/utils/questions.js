@@ -11,16 +11,17 @@ export const QUESTION_ORDER = [
   ["has_children", "Do you have children, or plan to, who would stay there?"],
   ["preferred_location", "Which area or location do you prefer?"],
   ["bhk", "What configuration are you after — 2, 3, 4 BHK, or something larger?"],
+  ["budget_min", "And what budget range are you working with?"],
 ];
 
-// Slots that must be present before we recommend anything. (Budget is omitted
-// while the inventory has no prices; re-add "budget_min" once prices exist.)
+// Slots that must be present before we recommend anything.
 export const REQUIRED_SLOTS = [
   "purpose",
   "property_type",
   "family_members",
   "preferred_location",
   "bhk",
+  "budget_min",
 ];
 
 // Questions we can ask together with their primary (keeps it to one/two).

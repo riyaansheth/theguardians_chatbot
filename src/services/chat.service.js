@@ -306,6 +306,14 @@ export async function handleChat({ sessionId, message, pageUrl }) {
     // the household, ask the advisor to gently educate and offer larger options
     // too — fired only on the turn the size info was just given.
     let advisorNote = null;
+    // Children mentioned -> offer family-friendly projects with kids' amenities.
+    if (extracted.has_children === true) {
+      advisorNote =
+        "The customer has children. Warmly offer to focus on family-friendly projects " +
+        "with great amenities for kids (play areas, pools, sports), and mention you'll " +
+        "prioritise those — phrase it as a question, e.g. 'would you like me to show you " +
+        "homes with great amenities for the little ones?'";
+    }
     const chosenBhk = bhkNumber(prefs.bhk);
     const targets = deriveTargetBHK(prefs);
     const justGaveSize = extracted.bhk != null || extracted.family_members != null;

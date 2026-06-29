@@ -88,7 +88,23 @@ export function familySuitable(prefs, prop) {
   return true;
 }
 
-// ---- Property score: 0..100 (matches CLAUDE.md spec exactly) ----
+// Kid-relevant amenity keywords (used when the customer has children).
+const CHILD_AMENITIES = [
+  "kid", "children", "play area", "play", "pool", "garden", "park", "sports",
+  "cricket", "basketball", "skating", "climbing", "badminton", "lawn", "theatre", "games",
+];
+
+// Bonus (0..8) for child-friendly amenities when the customer has children.
+export function childAmenityScore(prefs, prop) {
+  if (!prefs.has_children) return 0;
+  const hay = asArray(prop.amenities).map(norm).join(" | ");
+  if (!hay) return 0;
+  let hits = 0;
+  for (const k of CHILD_AMENITIES) if (hay.includes(k)) hits++;
+  return Math.min(8, hits * 2);
+}
+
+// ---- Property score: 0..100 base (+ child-amenity bonus) ----
 export function scoreProperty(prefs, prop) {
   let score = 0;
   // Location: 30
@@ -104,6 +120,8 @@ export function scoreProperty(prefs, prop) {
   if (prefs.property_type && eq(prefs.property_type, prop.property_type)) score += 10;
   // Family suitability: 5
   if (familySuitable(prefs, prop)) score += 5;
+  // Child-friendly amenities: up to 8 (helps rank kid-suitable projects first)
+  score += childAmenityScore(prefs, prop);
   return score;
 }
 
