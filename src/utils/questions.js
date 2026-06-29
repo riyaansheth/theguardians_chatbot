@@ -10,17 +10,16 @@ export const QUESTION_ORDER = [
   ["has_parents", "Will your parents be staying with you?"],
   ["has_children", "Do you have children, or plan to, who would stay there?"],
   ["preferred_location", "Which area or location do you prefer?"],
-  ["budget_min", "What budget range are you working with?"],
   ["bhk", "What configuration are you after — 2, 3, 4 BHK, or something larger?"],
 ];
 
-// Slots that must be present before we recommend anything.
+// Slots that must be present before we recommend anything. (Budget is omitted
+// while the inventory has no prices; re-add "budget_min" once prices exist.)
 export const REQUIRED_SLOTS = [
   "purpose",
   "property_type",
   "family_members",
   "preferred_location",
-  "budget_min",
   "bhk",
 ];
 

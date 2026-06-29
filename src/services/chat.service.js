@@ -101,7 +101,7 @@ function formatRecommendation(match) {
     id: p.id,
     project_name: p.project_name,
     developer: p.developer_name || null,
-    area: p.micro_location ? `${p.micro_location}, ${p.location}` : p.location,
+    area: p.micro_location || p.location,
     location: p.location,
     configuration: p.bhk || p.configuration || null,
     price_text: p.price_text || null,
@@ -125,7 +125,7 @@ function buildRecommendBlock(matches, isAlternatives, documentChunks, name) {
     const p = m.property;
     return {
       project: p.project_name,
-      area: p.micro_location ? `${p.micro_location}, ${p.location}` : p.location,
+      area: p.micro_location || p.location,
       configuration: p.bhk || p.configuration || null,
       price: p.price_text || null,
       possession: p.possession_status || null,

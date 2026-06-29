@@ -61,10 +61,12 @@ const LOCATION_CLUSTERS = [
   ["bandra", "pali hill", "bandstand", "carter road", "khar", "khar danda", "santacruz", "vile parle", "juhu", "juhu tara"],
   // Western suburbs — Andheri belt
   ["andheri", "jogeshwari", "goregaon", "versova", "lokhandwala", "four bungalows", "malad", "borivali", "marol", "chakala", "seepz"],
-  // Central / harbour suburbs
-  ["chembur", "ghatkopar", "mulund", "vikhroli", "kurla", "wadala", "sion"],
+  // Central / eastern suburbs (incl. Powai / LBS belt)
+  ["chembur", "ghatkopar", "mulund", "vikhroli", "kurla", "wadala", "sion", "powai", "bhandup", "nahur", "kanjurmarg", "chanivali", "asalpha"],
   // Thane
   ["thane", "ghodbunder", "kolshet", "majiwada", "manpada"],
+  // Goa
+  ["goa", "calangute", "kadamba", "panaji", "mapusa", "candolim"],
 ];
 
 // Index of the cluster a location belongs to, or null.
