@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>THE GUARDIAN — Admin</title>
+  <style>
+    :root { --navy: #0f2c4d; --blue: #1c4d80; --line: #e3e8ee; --bg: #f5f7fa; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #1a1a1a; background: var(--bg); }
+    header { background: linear-gradient(135deg, var(--navy), var(--blue)); color: #fff; padding: 18px 24px; }
+    header h1 { margin: 0; font-size: 18px; letter-spacing: 0.05em; }
+    header p { margin: 4px 0 0; opacity: 0.8; font-size: 13px; }
+    main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    section { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 20px; }
+    h2 { margin: 0 0 14px; font-size: 15px; color: var(--navy); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: #5b6b7b; font-weight: 600; }
+    tr:hover td { background: #fafcff; }
+    button { cursor: pointer; border: none; border-radius: 8px; padding: 8px 14px; background: var(--blue); color: #fff; font-weight: 600; }
+    button.secondary { background: #eef2f7; color: var(--navy); }
+    button.danger { background: #c0392b; padding: 4px 9px; font-size: 12px; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .pill { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+    .pill.high { background: #e6f4ea; color: #1e7e34; }
+    .pill.medium { background: #fff4e0; color: #b8860b; }
+    .pill.low { background: #fdecea; color: #c0392b; }
+    .status { font-size: 13px; color: #5b6b7b; margin-left: 10px; }
+    .muted { color: #8a97a4; }
+    #msgPanel { display: none; }
+    .msg { padding: 8px 12px; border-radius: 10px; margin-bottom: 8px; max-width: 80%; white-space: pre-wrap; }
+    .msg.user { background: var(--blue); color: #fff; margin-left: auto; }
+    .msg.assistant { background: #eef2f7; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>THE GUARDIAN — Admin</h1>
+    <p>Imports, leads, and chat sessions</p>
+  </header>
+  <main>
+    <section>
+      <h2>Import data</h2>
+      <div class="row">
+        <input type="file" id="file" accept=".xlsx,.xls,.csv,.pdf" />
+        <button id="uploadBtn">Upload</button>
+        <span class="status" id="uploadStatus"></span>
+      </div>
+      <p class="muted" style="font-size:12px;margin-top:8px;">Excel / CSV add properties; PDF brochures are chunked &amp; embedded for retrieval.</p>
+    </section>
+
+    <section>
+      <div class="row" style="justify-content:space-between;">
+        <h2 style="margin:0;">Properties</h2>
+        <button class="secondary" onclick="loadProperties()">Refresh</button>
+      </div>
+      <table id="propsTable"><thead><tr>
+        <th>ID</th><th>Project</th><th>Location</th><th>BHK</th><th>Price</th><th>Possession</th><th>Source</th><th></th>
+      </tr></thead><tbody></tbody></table>
+    </section>
+
+    <section>
+      <div class="row" style="justify-content:space-between;">
+        <h2 style="margin:0;">Leads</h2>
+        <button class="secondary" onclick="loadLeads()">Refresh</button>
+      </div>
+      <table id="leadsTable"><thead><tr>
+        <th>Name</th><th>Phone</th><th>Location</th><th>BHK</th><th>Score</th><th>Status</th><th>Updated</th>
+      </tr></thead><tbody></tbody></table>
+    </section>
+
+    <section>
+      <div class="row" style="justify-content:space-between;">
+        <h2 style="margin:0;">Chat sessions</h2>
+        <button class="secondary" onclick="loadSessions()">Refresh</button>
+      </div>
+      <table id="sessionsTable"><thead><tr>
+        <th>Session</th><th>Page</th><th>Messages</th><th>Started</th><th></th>
+      </tr></thead><tbody></tbody></table>
+      <div id="msgPanel" style="margin-top:16px;">
+        <h2 id="msgTitle"></h2>
+        <div id="msgList"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    async function api(path, opts) {
+      const res = await fetch(path, opts);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    }
+    function esc(s) { return (s == null ? "" : String(s)).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+    function tier(score) { return score >= 70 ? "high" : score >= 30 ? "medium" : "low"; }
+
+    async function loadProperties() {
+      const { properties } = await api("/admin/properties");
+      document.querySelector("#propsTable tbody").innerHTML = properties.map(p => `
+        <tr>
+          <td>${p.id}</td><td>${esc(p.project_name)}</td>
+          <td>${esc(p.location || "")}${p.micro_location ? " · " + esc(p.micro_location) : ""}</td>
+          <td>${esc(p.bhk || "")}</td><td>${esc(p.price_text || "—")}</td>
+          <td>${esc(p.possession_status || "—")}</td><td>${esc(p.source_file || "")}</td>
+          <td><button class="danger" onclick="delProp(${p.id})">Delete</button></td>
+        </tr>`).join("") || `<tr><td colspan="8" class="muted">No properties yet.</td></tr>`;
+    }
+    async function delProp(id) {
+      if (!confirm("Delete property " + id + "?")) return;
+      await api("/admin/properties/" + id, { method: "DELETE" });
+      loadProperties();
+    }
+
+    async function loadLeads() {
+      const { leads } = await api("/admin/leads");
+      document.querySelector("#leadsTable tbody").innerHTML = leads.map(l => `
+        <tr>
+          <td>${esc(l.name || "—")}</td><td>${esc(l.phone || "—")}</td>
+          <td>${esc(l.location || "—")}</td><td>${esc(l.bhk || "—")}</td>
+          <td><span class="pill ${tier(l.lead_score)}">${l.lead_score}</span></td>
+          <td>${esc(l.status)}</td><td class="muted">${new Date(l.updated_at).toLocaleString()}</td>
+        </tr>`).join("") || `<tr><td colspan="7" class="muted">No leads yet.</td></tr>`;
+    }
+
+    async function loadSessions() {
+      const { sessions } = await api("/admin/sessions");
+      document.querySelector("#sessionsTable tbody").innerHTML = sessions.map(s => `
+        <tr>
+          <td class="muted">${esc(s.id.slice(0, 8))}…</td>
+          <td>${esc(s.page_url || "—")}</td><td>${s.messages}</td>
+          <td class="muted">${new Date(s.created_at).toLocaleString()}</td>
+          <td><button class="secondary" onclick="viewMessages('${esc(s.id)}')">View</button></td>
+        </tr>`).join("") || `<tr><td colspan="5" class="muted">No sessions yet.</td></tr>`;
+    }
+    async function viewMessages(id) {
+      const { messages } = await api("/admin/sessions/" + id + "/messages");
+      document.getElementById("msgPanel").style.display = "block";
+      document.getElementById("msgTitle").textContent = "Session " + id.slice(0, 8) + "… (" + messages.length + " messages)";
+      document.getElementById("msgList").innerHTML = messages.map(m =>
+        `<div class="msg ${m.role}">${esc(m.content)}</div>`).join("");
+    }
+
+    document.getElementById("uploadBtn").addEventListener("click", async () => {
+      const f = document.getElementById("file").files[0];
+      const status = document.getElementById("uploadStatus");
+      if (!f) { status.textContent = "Choose a file first."; return; }
+      status.textContent = "Uploading…";
+      const fd = new FormData();
+      fd.append("file", f);
+      try {
+        const r = await api("/admin/import", { method: "POST", body: fd });
+        status.textContent = r.type === "pdf"
+          ? `PDF: ${r.chunks} chunk(s) embedded${r.propertyId ? " → property #" + r.propertyId : ""}.`
+          : `Imported ${r.rows} row(s): ${r.inserted} new, ${r.updated} updated, ${r.skipped} skipped.`;
+        loadProperties();
+      } catch (e) {
+        status.textContent = "Upload failed: " + e.message;
+      }
+    });
+
+    loadProperties(); loadLeads(); loadSessions();
+  </script>
+</body>
+</html>
