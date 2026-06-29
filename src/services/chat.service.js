@@ -120,7 +120,7 @@ function firstName(prefs) {
   return prefs && prefs.name ? String(prefs.name).trim().split(/\s+/)[0] : null;
 }
 
-function buildRecommendBlock(matches, isAlternatives, documentChunks, name) {
+function buildRecommendBlock(matches, isAlternatives, documentChunks, name, note) {
   const matched = matches.map((m) => {
     const p = m.property;
     return {
@@ -145,6 +145,7 @@ function buildRecommendBlock(matches, isAlternatives, documentChunks, name) {
   return [
     `USER = ${JSON.stringify({ name: name || null })}`,
     `OPENING = ${JSON.stringify(opening)}  // begin your reply with this exact line`,
+    ...(note ? [`NOTE = ${JSON.stringify(note)}  // important — follow this`] : []),
     `MATCHED_PROPERTIES = ${JSON.stringify(matched, null, 2)}`,
     `DOCUMENT_CHUNKS = ${JSON.stringify(documentChunks ?? [], null, 2)}`,
   ].join("\n");
@@ -342,7 +343,15 @@ export async function handleChat({ sessionId, message, pageUrl }) {
 
     // DOCUMENT_CHUNKS get populated in Phase 5 (RAG).
     const documentChunks = await retrieveChunks(prefs, matches);
-    const dataBlock = buildRecommendBlock(matches, isAlternatives, documentChunks, firstName(prefs));
+    // If the customer gave a budget but we hold no list prices, tell the advisor
+    // to be upfront about it instead of silently ignoring the budget.
+    const budgetGiven = prefs.budget_min != null || prefs.budget_max != null;
+    const noPrices = matches.every((m) => !m.property.price_text);
+    const note =
+      budgetGiven && noPrices
+        ? "The customer mentioned a budget, but we have NO list prices for these projects. Do not say anything is within, over or under budget. Warmly acknowledge that you don't have exact pricing on hand and that our advisors will share it, then focus on area and configuration fit."
+        : null;
+    const dataBlock = buildRecommendBlock(matches, isAlternatives, documentChunks, firstName(prefs), note);
     reply =
       (llmAvailable() &&
         (await safePhrase(() =>
