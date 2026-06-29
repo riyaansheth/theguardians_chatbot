@@ -1,0 +1,20 @@
+# Local build plan (do not publish)
+CLAUDE.md
+
+# Local tooling settings
+.claude/
+
+# Secrets / env
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
