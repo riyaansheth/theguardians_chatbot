@@ -261,6 +261,22 @@ export async function handleChat({ sessionId, message, pageUrl }) {
     delete prefs.budget_max;
   }
 
+  // Infer residential vs commercial from context so we don't ask the obvious:
+  // a family buying for self-use is residential; office/shop/retail is commercial.
+  if (!prefs.property_type) {
+    if (/\b(office|shop|retail|commercial|workspace|work space|showroom|warehouse|godown|co-?working|business premises)\b/.test(userSaid)) {
+      prefs.property_type = "commercial";
+    } else if (
+      prefs.family_members != null ||
+      prefs.has_children === true ||
+      prefs.has_parents === true ||
+      String(prefs.purpose).toLowerCase() === "self-use" ||
+      /\b(family|wife|husband|spouse|kid|kids|child|children|son|daughter|parents|live|stay|home|house|bedroom|bhk|flat|apartment)\b/.test(userSaid)
+    ) {
+      prefs.property_type = "residential";
+    }
+  }
+
   // Budget: a single figure (e.g. "around 20 cr") becomes a ceiling with a
   // sensible floor, so suitable lower-priced homes still qualify as matches.
   // Explicit ranges ("2.8 to 3.5 cr") are kept exactly as given.

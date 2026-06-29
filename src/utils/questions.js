@@ -26,30 +26,38 @@ export const REQUIRED_SLOTS = [
 // Questions we can ask together with their primary (keeps it to one/two).
 const PAIRED = { has_parents: "has_children" };
 
+// Slots that only make sense for a home — skipped for commercial enquiries.
+const RESIDENTIAL_ONLY = new Set(["family_members", "has_parents", "has_children", "bhk"]);
+
 function isFilled(prefs, slot) {
   return prefs[slot] !== null && prefs[slot] !== undefined && prefs[slot] !== "";
 }
 
+function skip(slot, prefs) {
+  return RESIDENTIAL_ONLY.has(slot) && prefs.property_type === "commercial";
+}
+
 export function firstMissingSlot(prefs) {
-  for (const [slot] of QUESTION_ORDER) if (!isFilled(prefs, slot)) return slot;
+  for (const [slot] of QUESTION_ORDER) {
+    if (!skip(slot, prefs) && !isFilled(prefs, slot)) return slot;
+  }
   return null;
 }
 
 // Returns { slot, question, secondQuestion? } or null when everything is collected.
 export function nextQuestion(prefs) {
   for (const [slot, question] of QUESTION_ORDER) {
-    if (!isFilled(prefs, slot)) {
-      const result = { slot, question };
-      const pairSlot = PAIRED[slot];
-      if (pairSlot && !isFilled(prefs, pairSlot)) {
-        result.secondQuestion = QUESTION_ORDER.find(([s]) => s === pairSlot)?.[1];
-      }
-      return result;
+    if (skip(slot, prefs) || isFilled(prefs, slot)) continue;
+    const result = { slot, question };
+    const pairSlot = PAIRED[slot];
+    if (pairSlot && !skip(pairSlot, prefs) && !isFilled(prefs, pairSlot)) {
+      result.secondQuestion = QUESTION_ORDER.find(([s]) => s === pairSlot)?.[1];
     }
+    return result;
   }
   return null;
 }
 
 export function hasAllRequired(prefs) {
-  return REQUIRED_SLOTS.every((s) => isFilled(prefs, s));
+  return REQUIRED_SLOTS.every((s) => skip(s, prefs) || isFilled(prefs, s));
 }
