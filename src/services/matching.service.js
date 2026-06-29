@@ -31,11 +31,25 @@ export function findExactMatches(prefs, props) {
 // tagged isExact. Falls back to best-available when nothing is exact.
 export function findRecommendations(prefs, props, limit = 3) {
   const ranked = rankProperties(prefs, props);
-  const hasExact = ranked.some((r) => r.score >= EXACT_THRESHOLD);
-  const pool = hasExact
-    ? ranked.filter((r) => r.score >= 55) // exact + genuinely close
-    : ranked.filter((r) => r.score > 0); // best available
-  const matches = pool.slice(0, limit).map((r) => ({
+
+  // If the customer named a location, only offer same/nearby-area properties, so
+  // we never pad the list with a far-flung area (e.g. Powai for a Worli request).
+  // Fall back to all options only when nothing local exists at all.
+  let pool = ranked;
+  if (prefs.preferred_location) {
+    const local = ranked.filter(
+      (r) =>
+        sameLocation(prefs.preferred_location, r.property) ||
+        nearbyLocation(prefs.preferred_location, r.property)
+    );
+    if (local.length) pool = local;
+  }
+
+  const hasExact = pool.some((r) => r.score >= EXACT_THRESHOLD);
+  const candidates = hasExact
+    ? pool.filter((r) => r.score >= 55) // exact + genuinely close
+    : pool.filter((r) => r.score > 0); // best available
+  const matches = candidates.slice(0, limit).map((r) => ({
     ...r,
     isExact: r.score >= EXACT_THRESHOLD,
     relaxation: r.score >= EXACT_THRESHOLD ? null : relaxationReason(prefs, r.property),
