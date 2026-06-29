@@ -22,8 +22,9 @@ app.use(
 const corsOptions = {
   origin(origin, callback) {
     // Allow non-browser requests (curl, server-to-server) which send no origin.
-    if (!origin || env.allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error(`Origin not allowed by CORS: ${origin}`));
+    // For a disallowed browser origin, omit CORS headers (no error) so the
+    // browser blocks it client-side without polluting the server with 500s.
+    callback(null, !origin || env.allowedOrigins.includes(origin));
   },
 };
 app.use("/api", cors(corsOptions));

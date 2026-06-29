@@ -1,0 +1,134 @@
+/* All widget styles live inside the Shadow DOM, so host-site CSS cannot reach
+   them and these cannot leak out. :host is the widget container element. */
+:host {
+  all: initial;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.tg-root {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 2147483000;
+  font-size: 15px;
+  line-height: 1.45;
+  color: #1a1a1a;
+}
+
+.tg-launcher {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg, #0f2c4d, #1c4d80);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+}
+.tg-launcher:hover { transform: scale(1.06); }
+.tg-launcher svg { width: 28px; height: 28px; }
+
+.tg-panel {
+  position: absolute;
+  bottom: 76px;
+  right: 0;
+  width: 370px;
+  max-width: calc(100vw - 32px);
+  height: 560px;
+  max-height: calc(100vh - 120px);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.tg-root.tg-open .tg-panel { display: flex; }
+.tg-root.tg-open .tg-launcher { transform: scale(0.9); }
+
+.tg-header {
+  background: linear-gradient(135deg, #0f2c4d, #1c4d80);
+  color: #fff;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tg-header .tg-title { font-weight: 600; letter-spacing: 0.04em; }
+.tg-header .tg-sub { font-size: 12px; opacity: 0.8; }
+.tg-close {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.tg-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background: #f5f7fa;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tg-msg {
+  max-width: 82%;
+  padding: 10px 13px;
+  border-radius: 14px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.tg-msg.bot { align-self: flex-start; background: #fff; border: 1px solid #e3e8ee; border-bottom-left-radius: 4px; }
+.tg-msg.user { align-self: flex-end; background: #1c4d80; color: #fff; border-bottom-right-radius: 4px; }
+
+.tg-typing { align-self: flex-start; display: flex; gap: 4px; padding: 12px 14px; background: #fff; border: 1px solid #e3e8ee; border-radius: 14px; }
+.tg-typing span { width: 7px; height: 7px; border-radius: 50%; background: #9aa7b4; animation: tg-bounce 1.2s infinite ease-in-out; }
+.tg-typing span:nth-child(2) { animation-delay: 0.15s; }
+.tg-typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes tg-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-5px); opacity: 1; } }
+
+.tg-input {
+  display: flex;
+  border-top: 1px solid #e3e8ee;
+  padding: 10px;
+  gap: 8px;
+  background: #fff;
+}
+.tg-input input {
+  flex: 1;
+  border: 1px solid #d4dbe3;
+  border-radius: 22px;
+  padding: 10px 14px;
+  font-size: 14px;
+  outline: none;
+}
+.tg-input input:focus { border-color: #1c4d80; }
+.tg-input button {
+  border: none;
+  background: #1c4d80;
+  color: #fff;
+  border-radius: 22px;
+  padding: 0 16px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.tg-input button:disabled { opacity: 0.5; cursor: default; }
+
+@media (max-width: 480px) {
+  .tg-root { bottom: 16px; right: 16px; }
+  .tg-panel { width: calc(100vw - 24px); height: calc(100vh - 96px); }
+}

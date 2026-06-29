@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fake Client Site — widget isolation test</title>
+  <!-- Deliberately AGGRESSIVE host CSS. If the widget is properly isolated in a
+       Shadow DOM, none of this should affect it. -->
+  <style>
+    * {
+      color: #cc0000 !important;
+      font-family: "Comic Sans MS", cursive !important;
+      font-size: 22px !important;
+      letter-spacing: 2px !important;
+    }
+    body {
+      background: repeating-linear-gradient(45deg, #ffe, #ffe 20px, #eef 20px, #eef 40px);
+      margin: 0;
+      padding: 40px;
+    }
+    button { border: 4px dashed lime !important; background: yellow !important; }
+    input { background: pink !important; border: 3px solid purple !important; }
+    div { outline: 1px solid rgba(255, 0, 0, 0.2); }
+  </style>
+</head>
+<body>
+  <h1>The Guardians — (pretend) client website</h1>
+  <p>
+    This page applies hostile global CSS (red Comic Sans, lime-dashed buttons,
+    pink inputs). The chat widget in the bottom-right should look completely
+    unaffected because it renders inside a Shadow DOM.
+  </p>
+  <button>A host-page button (should look ugly)</button>
+  <input placeholder="A host-page input (should look ugly)" />
+
+  <!-- ===== Two-line embed snippet ===== -->
+  <script>
+    window.TheGuardianBotConfig = {
+      apiUrl: "/api/chat",
+      botName: "THE GUARDIAN",
+    };
+  </script>
+  <script src="/widget.js"></script>
+  <!-- ================================== -->
+</body>
+</html>
