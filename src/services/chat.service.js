@@ -9,6 +9,7 @@ import {
   ASK_SYSTEM,
 } from "./openai.service.js";
 import { findExactMatches, findAlternativeMatches } from "./matching.service.js";
+import { retrieveChunksForProperties } from "./embedding.service.js";
 import { firstMissingSlot, nextQuestion } from "../utils/questions.js";
 import { scoreLead, leadTier } from "../utils/scoring.js";
 import { isValidIndianPhone, normalizePhone, isValidEmail } from "../utils/validate.js";
@@ -252,7 +253,23 @@ async function safePhrase(system, dataBlock) {
   }
 }
 
-// Overridden with real retrieval in Phase 5; no-op until then.
-async function retrieveChunks() {
-  return [];
+// Retrieve top-k PDF chunks for the matched properties to ground phrasing.
+async function retrieveChunks(prefs, matches) {
+  try {
+    const ids = matches.map((m) => m.property.id).filter(Boolean);
+    if (!ids.length) return [];
+    const queryText = [
+      prefs.preferred_location,
+      prefs.bhk,
+      ...(Array.isArray(prefs.amenities) ? prefs.amenities : []),
+      "amenities location highlights connectivity possession",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const chunks = await retrieveChunksForProperties(queryText, ids, 4);
+    return chunks.map((c) => ({ text: c.text, score: Number(c.score.toFixed(3)) }));
+  } catch (err) {
+    console.error("[chat] chunk retrieval failed:", err.message);
+    return [];
+  }
 }

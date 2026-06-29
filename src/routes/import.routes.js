@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { unlink } from "node:fs/promises";
 import { extname } from "node:path";
 import { importSpreadsheet, listProperties } from "../services/import.service.js";
+import { ingestPdf } from "../services/embedding.service.js";
 
 const router = Router();
 
@@ -26,7 +27,10 @@ router.post("/import", upload.single("file"), async (req, res, next) => {
       const result = await importSpreadsheet(tmpPath, originalname);
       return res.json({ ok: true, type: "spreadsheet", ...result });
     }
-    // PDF ingestion is wired up in Phase 5.
+    if (ext === ".pdf") {
+      const result = await ingestPdf(tmpPath, originalname);
+      return res.json({ ok: true, type: "pdf", ...result });
+    }
     return res.status(415).json({ error: `Unsupported file type: ${ext || "unknown"}` });
   } catch (err) {
     return next(err);
