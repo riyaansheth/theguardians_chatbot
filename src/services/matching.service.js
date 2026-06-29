@@ -26,6 +26,24 @@ export function findExactMatches(prefs, props) {
     .map((r) => ({ ...r, explanation: explainMatch(prefs, r.property) }));
 }
 
+// Single entry point used by the chat loop. Always surfaces up to `limit`
+// options: exact matches (>=70) plus the closest near-misses to top up, each
+// tagged isExact. Falls back to best-available when nothing is exact.
+export function findRecommendations(prefs, props, limit = 3) {
+  const ranked = rankProperties(prefs, props);
+  const hasExact = ranked.some((r) => r.score >= EXACT_THRESHOLD);
+  const pool = hasExact
+    ? ranked.filter((r) => r.score >= 55) // exact + genuinely close
+    : ranked.filter((r) => r.score > 0); // best available
+  const matches = pool.slice(0, limit).map((r) => ({
+    ...r,
+    isExact: r.score >= EXACT_THRESHOLD,
+    relaxation: r.score >= EXACT_THRESHOLD ? null : relaxationReason(prefs, r.property),
+    explanation: explainMatch(prefs, r.property),
+  }));
+  return { isAlternatives: !hasExact, matches };
+}
+
 // When no exact match: best 3 below threshold, each tagged with what we relaxed.
 export function findAlternativeMatches(prefs, props) {
   return rankProperties(prefs, props)

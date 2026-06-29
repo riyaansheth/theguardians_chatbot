@@ -11,7 +11,7 @@ export const QUESTION_ORDER = [
   ["has_children", "Do you have children, or plan to, who would stay there?"],
   ["preferred_location", "Which area or location do you prefer?"],
   ["budget_min", "What budget range are you working with?"],
-  ["bhk", "What configuration are you after — 1, 2, or 3 BHK?"],
+  ["bhk", "What configuration are you after — 2, 3, 4 BHK, or something larger?"],
   ["phone", "Lastly, a phone number so The Guardians can share matching options and arrange a visit?"],
 ];
 

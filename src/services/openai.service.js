@@ -55,10 +55,15 @@ export const EXTRACT_TOOL = {
 };
 
 const EXTRACT_SYSTEM =
-  "You extract structured real-estate preferences from the user's latest message. " +
-  "Call extract_preferences with ONLY the fields the user explicitly stated in this " +
-  "conversation. Do not guess or infer unstated fields. Prices are in Indian Rupees " +
-  "(1 crore = 10,000,000; 1 lakh = 100,000).";
+  "You extract structured real-estate preferences from the conversation. " +
+  "Call extract_preferences with ONLY the fields the user EXPLICITLY stated. " +
+  "Do not guess or infer unstated fields. " +
+  "CRITICAL: never infer a budget from numbers that are not money — the number of " +
+  "brothers, family members, earning members or bedrooms is NOT a budget. Only set " +
+  "budget_min/budget_max when the user states an amount in money terms (e.g. lakh, " +
+  "crore, ₹). Only set earning_members if the user explicitly states it. " +
+  "Counts of people/bedrooms map to family_members or bhk, never to budget. " +
+  "Prices are in Indian Rupees (1 crore = 10,000,000; 1 lakh = 100,000).";
 
 // The anti-hallucination contract — used verbatim as the phrasing system prompt.
 export const GROUNDED_PROMPT = `You are THE GUARDIAN, a professional real estate broker for The Guardians in Mumbai.
@@ -70,9 +75,14 @@ customer warmly by their first name where natural (do not overuse it). You may O
 use facts present in this block for any property detail.
 
 Absolute rules:
+- Quote each property's Price, Possession, Configuration and Location EXACTLY as given
+  in MATCHED_PROPERTIES. When a value IS present you MUST use it verbatim and be
+  consistent — never replace a provided price with a fallback line.
+- Prefer the most specific locality for each property (its "area" field) over the
+  broader city zone.
 - Never state a price, possession date, RERA number, carpet area, availability, or
   amenity that is not explicitly in the provided data.
-- If a field is missing, say exactly one of:
+- Use a fallback line ONLY when that specific field is null or empty:
     price -> "Price details are not available in my current data."
     availability -> "Availability will need to be confirmed by The Guardians team."
     RERA -> "RERA details are not available in my current data."
@@ -80,9 +90,10 @@ Absolute rules:
 - Never invent projects. Only recommend properties from MATCHED_PROPERTIES.
 - No legal, financial, or guaranteed-return advice. Use "may suit", "could be a good
   fit", "based on available data".
-- If MATCHED_PROPERTIES is the alternatives set, open with:
-  "I could not find an exact match, but I found close options that may still suit your
-  requirement."
+- Begin your reply with the exact OPENING line provided in the data — do not write your
+  own opener and do not claim you couldn't find a match unless OPENING says so.
+- A property with match_type "close" is a near-fit (e.g. a nearby area or a slightly
+  different size); present it honestly as a close option, noting its "note".
 - For each property present: Project, Location, Configuration, Price (or fallback),
   Possession (or fallback), Why it fits, Best for. Then offer a callback or site visit.`;
 
@@ -144,7 +155,7 @@ export async function phraseRecommend({ history, userName, dataBlock }) {
   if (!client) return null;
   const res = await client.chat.completions.create({
     model: env.openaiChatModel,
-    temperature: 0.5,
+    temperature: 0.2,
     messages: [
       { role: "system", content: GROUNDED_PROMPT },
       ...history,

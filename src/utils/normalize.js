@@ -48,11 +48,22 @@ export function asArray(v) {
   return [v];
 }
 
-// Mumbai-region location clusters used for "nearby" scoring.
+// Mumbai-region location clusters used for "nearby" scoring. Grouped so that
+// adjacent localities (and a parent area's sub-localities) count as nearby.
 const LOCATION_CLUSTERS = [
-  ["byculla", "lower parel", "worli", "parel", "mahalaxmi", "prabhadevi", "dadar"],
-  ["andheri", "jogeshwari", "goregaon", "versova", "vile parle", "borivali", "malad", "bandra", "khar", "santacruz"],
+  // South Mumbai — tip
+  ["colaba", "cuffe parade", "churchgate", "marine drive", "marine lines", "nariman point", "fort", "badhwar park", "apollo bunder", "fountain"],
+  // South Mumbai — hill / sea
+  ["malabar hill", "walkeshwar", "napean sea road", "breach candy", "kemps corner", "altamount", "peddar road"],
+  // Central South Mumbai
+  ["tardeo", "mumbai central", "jacob circle", "haji ali", "mahalaxmi", "worli", "worli naka", "worli sea face", "lower parel", "prabhadevi", "parel", "byculla", "mazgaon", "dadar", "matunga", "century bazaar"],
+  // Western suburbs — inner
+  ["bandra", "pali hill", "bandstand", "carter road", "khar", "khar danda", "santacruz", "vile parle", "juhu", "juhu tara"],
+  // Western suburbs — Andheri belt
+  ["andheri", "jogeshwari", "goregaon", "versova", "lokhandwala", "four bungalows", "malad", "borivali", "marol", "chakala", "seepz"],
+  // Central / harbour suburbs
   ["chembur", "ghatkopar", "mulund", "vikhroli", "kurla", "wadala", "sion"],
+  // Thane
   ["thane", "ghodbunder", "kolshet", "majiwada", "manpada"],
 ];
 

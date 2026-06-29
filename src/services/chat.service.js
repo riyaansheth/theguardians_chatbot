@@ -7,7 +7,7 @@ import {
   phraseAsk,
   phraseRecommend,
 } from "./openai.service.js";
-import { findExactMatches, findAlternativeMatches } from "./matching.service.js";
+import { findRecommendations } from "./matching.service.js";
 import { retrieveChunksForProperties } from "./embedding.service.js";
 import { firstMissingSlot, nextQuestion } from "../utils/questions.js";
 import { scoreLead, leadTier } from "../utils/scoring.js";
@@ -121,18 +121,26 @@ function buildRecommendBlock(matches, isAlternatives, documentChunks, name) {
     const p = m.property;
     return {
       project: p.project_name,
-      location: p.location,
+      area: p.micro_location ? `${p.micro_location}, ${p.location}` : p.location,
       configuration: p.bhk || p.configuration || null,
       price: p.price_text || null,
       possession: p.possession_status || null,
       rera: p.rera_number || null,
+      match_type: m.isExact === false ? "close" : "exact",
+      note: m.isExact === false && m.relaxation ? `close option — ${m.relaxation}` : null,
       why_it_fits: m.explanation.whyItFits,
       best_for: m.explanation.bestFor || null,
     };
   });
+  const allExact = matched.every((x) => x.match_type === "exact");
+  const opening = isAlternatives
+    ? "I could not find an exact match, but I found close options that may still suit your requirement."
+    : allExact
+      ? "Here are options that suit your requirement:"
+      : "Here are the closest options I found for you:";
   return [
     `USER = ${JSON.stringify({ name: name || null })}`,
-    `RESULT_SET = ${isAlternatives ? "ALTERNATIVES" : "EXACT"}`,
+    `OPENING = ${JSON.stringify(opening)}  // begin your reply with this exact line`,
     `MATCHED_PROPERTIES = ${JSON.stringify(matched, null, 2)}`,
     `DOCUMENT_CHUNKS = ${JSON.stringify(documentChunks ?? [], null, 2)}`,
   ].join("\n");
@@ -241,6 +249,24 @@ export async function handleChat({ sessionId, message, pageUrl }) {
   }
   if (prefs.email != null && !isValidEmail(prefs.email)) delete prefs.email;
 
+  // Guard against a hallucinated budget: only keep budget figures if the user
+  // actually mentioned money somewhere (a count of brothers/bedrooms is NOT a
+  // budget). Phone numbers are excluded by requiring a money unit or ₹.
+  const userSaid = [
+    ...historyBefore.filter((m) => m.role === "user").map((m) => m.content),
+    message,
+  ]
+    .join(" ")
+    .toLowerCase();
+  const mentionedMoney =
+    /\b\d+(?:\.\d+)?\s*(?:crore|cr|lakh|lac|lacs|k)\b/.test(userSaid) ||
+    /₹\s*\d/.test(userSaid) ||
+    /\bbudget\b/.test(userSaid);
+  if (!mentionedMoney) {
+    delete prefs.budget_min;
+    delete prefs.budget_max;
+  }
+
   // Budget: a single figure (e.g. "around 20 cr") becomes a ceiling with a
   // sensible floor, so suitable lower-priced homes still qualify as matches.
   // Explicit ranges ("2.8 to 3.5 cr") are kept exactly as given.
@@ -278,12 +304,7 @@ export async function handleChat({ sessionId, message, pageUrl }) {
       fallbackAsk(next, isFirstTurn, prefs);
   } else {
     const allProps = await loadProperties();
-    let matches = findExactMatches(prefs, allProps);
-    let isAlternatives = false;
-    if (matches.length === 0) {
-      matches = findAlternativeMatches(prefs, allProps);
-      isAlternatives = true;
-    }
+    const { isAlternatives, matches } = findRecommendations(prefs, allProps);
     mode = isAlternatives ? "alternatives" : "recommend";
     recommendations = matches.map(formatRecommendation);
 
