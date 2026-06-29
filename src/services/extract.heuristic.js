@@ -68,6 +68,16 @@ export function extractHeuristic(message, pendingSlot, prefs) {
   const bhkM = low.match(/(\d+)\s*(?:bhk|bed)/);
   if (bhkM) out.bhk = `${bhkM[1]} BHK`;
 
+  // Family size from "4 of us / 4 guys / 5 people / 3 brothers".
+  const famG = low.match(/\b(\d+)\s*(?:of us|guys|people|persons|members|brothers|sisters|friends|adults|folks)\b/);
+  if (famG) out.family_members = parseInt(famG[1], 10);
+
+  // "just us / no one else" means nobody else is staying -> no parents, no kids.
+  if (/\b(no one else|nobody else|no-?one else|just us|only us|just the \w+ of us|only the \w+ of us|just me|nobody but us|no one but us)\b/.test(low)) {
+    out.has_parents = false;
+    out.has_children = false;
+  }
+
   if (/cr|crore|lakh|lac|budget|₹|rs\.?|price|\bcrore\b/.test(low)) {
     const b = parseBudgetRange(text);
     if (b) {
