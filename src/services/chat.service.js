@@ -306,6 +306,12 @@ export async function handleChat({ sessionId, message, pageUrl }) {
         `glad to also show ${Math.min(...targets)}–${Math.max(...targets)} BHK options to compare — ` +
         `never insist or imply their choice is wrong.`;
     }
+    // Warmth tapers: welcoming for the first couple of turns, then businesslike.
+    const askCount = historyBefore.filter((m) => m.role === "assistant").length;
+    const style =
+      askCount <= 1
+        ? "Tone: warm and welcoming."
+        : "Tone: concise and businesslike now — at most a brief 3–7 word acknowledgement, then the question. No compliments, no exclamation marks, don't use their name this turn, and don't explain why you're asking.";
     reply =
       (llmAvailable() &&
         (await safePhrase(() =>
@@ -315,6 +321,7 @@ export async function handleChat({ sessionId, message, pageUrl }) {
             nextQuestion: next.question,
             secondQuestion: next.secondQuestion,
             advisorNote,
+            style,
           })
         ))) ||
       fallbackAsk(next, isFirstTurn, prefs);
