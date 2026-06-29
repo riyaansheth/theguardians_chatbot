@@ -80,3 +80,35 @@ export function clusterOf(loc) {
   }
   return null;
 }
+
+// Coarse south -> north zones used to find the geographically CLOSEST area when
+// there is no inventory in or near the requested location. Lower = further south.
+const AREA_ZONES = [
+  ["colaba", "cuffe parade", "nariman point", "fort", "churchgate", "marine drive", "marine lines", "malabar hill", "walkeshwar", "napean sea road", "breach candy", "kemps corner", "tardeo", "mumbai central", "south bombay", "south mumbai", "sobo", "town"],
+  ["mahalaxmi", "worli", "lower parel", "prabhadevi", "parel", "byculla", "mazgaon", "haji ali", "jacob circle"],
+  ["dadar", "matunga", "sion", "mahim", "wadala"],
+  ["chembur", "kurla", "ghatkopar", "vidyavihar", "govandi"],
+  ["powai", "vikhroli", "kanjurmarg", "chanivali", "asalpha"],
+  ["bhandup", "nahur", "mulund"],
+  ["bandra", "khar", "santacruz", "vile parle", "juhu"],
+  ["andheri", "jogeshwari", "goregaon", "malad", "versova", "lokhandwala"],
+  ["borivali", "kandivali", "dahisar"],
+  ["thane", "ghodbunder", "kolshet", "majiwada", "manpada"],
+  ["goa", "calangute", "kadamba", "panaji", "mapusa", "candolim"],
+];
+
+// Zone index for a location (0 = southernmost), or null if unknown.
+export function areaZone(loc) {
+  const n = norm(loc);
+  if (!n) return null;
+  for (let i = 0; i < AREA_ZONES.length; i++) {
+    if (AREA_ZONES[i].some((t) => n.includes(t) || t.includes(n))) return i;
+  }
+  return null;
+}
+
+// Distance between two zones; large when either is unknown.
+export function zoneDistance(a, b) {
+  if (a == null || b == null) return 99;
+  return Math.abs(a - b);
+}

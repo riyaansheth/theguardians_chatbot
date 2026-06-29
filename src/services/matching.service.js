@@ -1,6 +1,6 @@
 // Deterministic matching over property rows. No LLM here.
 // The DB query lives in the caller; these functions take plain rows.
-import { asArray } from "../utils/normalize.js";
+import { asArray, areaZone, zoneDistance } from "../utils/normalize.js";
 import {
   scoreProperty,
   sameLocation,
@@ -36,26 +36,41 @@ export function findRecommendations(prefs, props, limit = 3) {
   // we never pad the list with a far-flung area (e.g. Powai for a Worli request).
   // Fall back to all options only when nothing local exists at all.
   let pool = ranked;
+  let geoFallback = false;
   if (prefs.preferred_location) {
     const local = ranked.filter(
       (r) =>
         sameLocation(prefs.preferred_location, r.property) ||
         nearbyLocation(prefs.preferred_location, r.property)
     );
-    if (local.length) pool = local;
+    if (local.length) {
+      pool = local;
+    } else {
+      // No inventory in or near the requested area — offer the geographically
+      // CLOSEST areas (by south->north zone), not the highest score anywhere.
+      const reqZone = areaZone(prefs.preferred_location);
+      pool = ranked.slice().sort((a, b) => {
+        const da = zoneDistance(reqZone, areaZone(a.property.location) ?? areaZone(a.property.micro_location));
+        const db = zoneDistance(reqZone, areaZone(b.property.location) ?? areaZone(b.property.micro_location));
+        return da - db || b.score - a.score;
+      });
+      geoFallback = true;
+    }
   }
 
-  const hasExact = pool.some((r) => r.score >= EXACT_THRESHOLD);
-  const candidates = hasExact
-    ? pool.filter((r) => r.score >= 55) // exact + genuinely close
-    : pool.filter((r) => r.score > 0); // best available
+  const hasExact = !geoFallback && pool.some((r) => r.score >= EXACT_THRESHOLD);
+  const candidates = geoFallback
+    ? pool
+    : hasExact
+      ? pool.filter((r) => r.score >= 55) // exact + genuinely close
+      : pool.filter((r) => r.score > 0); // best available
   const matches = candidates.slice(0, limit).map((r) => ({
     ...r,
-    isExact: r.score >= EXACT_THRESHOLD,
-    relaxation: r.score >= EXACT_THRESHOLD ? null : relaxationReason(prefs, r.property),
+    isExact: hasExact && r.score >= EXACT_THRESHOLD,
+    relaxation: hasExact && r.score >= EXACT_THRESHOLD ? null : relaxationReason(prefs, r.property),
     explanation: explainMatch(prefs, r.property),
   }));
-  return { isAlternatives: !hasExact, matches };
+  return { isAlternatives: geoFallback || !hasExact, matches };
 }
 
 // When no exact match: best 3 below threshold, each tagged with what we relaxed.
