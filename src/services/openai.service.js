@@ -143,6 +143,30 @@ export async function phraseAsk({ history, userName, nextQuestion, secondQuestio
   return res.choices[0]?.message?.content?.trim() ?? null;
 }
 
+const FOLLOWUP_SYSTEM = `${PERSONA}
+
+You have ALREADY shown the customer these options (PROPERTIES_ALREADY_SHOWN, including their amenities). Continue the conversation naturally based on their latest message:
+- Answer questions about the shown properties using ONLY the provided facts (e.g. which has a pool or kids' play area, the configuration, possession, or indicative price).
+- Help them compare or narrow down if they ask (e.g. which is more affordable).
+- If they want to visit or speak to someone, ask their preferred day/time and assure them an advisor from The Guardians will reach out to confirm.
+- If they thank you or make small talk, respond warmly and briefly.
+Do NOT repeat or re-list all the options or re-introduce them unless asked. Keep it short and human. Never invent a property detail — if something isn't in the data, say our team will confirm it.`;
+
+// Phrase a follow-up turn after options were already shown (no card re-dump).
+export async function phraseFollowup({ history, userName, dataBlock }) {
+  if (!client) return null;
+  const res = await client.chat.completions.create({
+    model: env.openaiChatModel,
+    temperature: 0.5,
+    messages: [
+      { role: "system", content: FOLLOWUP_SYSTEM },
+      ...history,
+      { role: "user", content: dataBlock },
+    ],
+  });
+  return res.choices[0]?.message?.content?.trim() ?? null;
+}
+
 // Phrase the recommendation turn, grounded ONLY in the provided data block.
 export async function phraseRecommend({ history, userName, dataBlock }) {
   if (!client) return null;

@@ -6,6 +6,7 @@ import {
   extractPreferences,
   phraseAsk,
   phraseRecommend,
+  phraseFollowup,
 } from "./openai.service.js";
 import { findRecommendations } from "./matching.service.js";
 import { retrieveChunksForProperties } from "./embedding.service.js";
@@ -130,6 +131,7 @@ function buildRecommendBlock(matches, isAlternatives, documentChunks, name, note
       price: p.price_text || null,
       possession: p.possession_status || null,
       rera: p.rera_number || null,
+      amenities: Array.isArray(p.amenities) ? p.amenities.slice(0, 10) : [],
       match_type: m.isExact === false ? "close" : "exact",
       note: m.isExact === false && m.relaxation ? `close option — ${m.relaxation}` : null,
       why_it_fits: m.explanation.whyItFits,
@@ -149,6 +151,30 @@ function buildRecommendBlock(matches, isAlternatives, documentChunks, name, note
     `MATCHED_PROPERTIES = ${JSON.stringify(matched, null, 2)}`,
     `DOCUMENT_CHUNKS = ${JSON.stringify(documentChunks ?? [], null, 2)}`,
   ].join("\n");
+}
+
+// Data for a post-recommendation follow-up turn (options already shown).
+function buildFollowupBlock(matches, name) {
+  const props = matches.map((m) => {
+    const p = m.property;
+    return {
+      project: p.project_name,
+      area: p.micro_location || p.location,
+      configuration: p.bhk || p.configuration || null,
+      price: p.price_text || null,
+      possession: p.possession_status || null,
+      amenities: Array.isArray(p.amenities) ? p.amenities : [],
+    };
+  });
+  return [
+    `USER = ${JSON.stringify({ name: name || null })}`,
+    `PROPERTIES_ALREADY_SHOWN = ${JSON.stringify(props, null, 2)}`,
+  ].join("\n");
+}
+
+function fallbackFollowup(prefs) {
+  const name = firstName(prefs);
+  return `Happy to help${name ? `, ${name}` : ""}. Would you like to know more about any of these, or shall I arrange a site visit or a call with one of our advisors?`;
 }
 
 // Deterministic fallback phrasing (used when no LLM key is configured).
@@ -292,7 +318,6 @@ export async function handleChat({ sessionId, message, pageUrl }) {
   }
 
   const leadScore = scoreLead(prefs);
-  await upsertLead(sessionId, prefs, leadScore);
 
   // 5. DECIDE next step deterministically.
   const next = nextQuestion(prefs);
@@ -346,29 +371,45 @@ export async function handleChat({ sessionId, message, pageUrl }) {
   } else {
     const allProps = await loadProperties();
     const { isAlternatives, matches } = findRecommendations(prefs, allProps);
-    mode = isAlternatives ? "alternatives" : "recommend";
-    recommendations = matches.map(formatRecommendation);
+    const ids = matches.map((m) => m.property.id);
+    const prevIds = Array.isArray(prefs._rec_ids) ? prefs._rec_ids : null;
+    const sameSet = prevIds && prevIds.length === ids.length && prevIds.every((v, i) => v === ids[i]);
 
-    // DOCUMENT_CHUNKS get populated in Phase 5 (RAG).
-    const documentChunks = await retrieveChunks(prefs, matches);
-    // If the customer gave a budget but we hold no list prices, tell the advisor
-    // to be upfront about it instead of silently ignoring the budget.
-    const budgetGiven = prefs.budget_min != null || prefs.budget_max != null;
-    const noPrices = matches.every((m) => !m.property.price_text);
-    const note =
-      budgetGiven && noPrices
-        ? "The customer mentioned a budget, but we have NO list prices for these projects. Do not say anything is within, over or under budget. Warmly acknowledge that you don't have exact pricing on hand and that our advisors will share it, then focus on area and configuration fit."
-        : null;
-    const dataBlock = buildRecommendBlock(matches, isAlternatives, documentChunks, firstName(prefs), note);
-    reply =
-      (llmAvailable() &&
-        (await safePhrase(() =>
-          phraseRecommend({ history: llmHistory, userName: firstName(prefs), dataBlock })
-        ))) ||
-      fallbackRecommend(matches, isAlternatives, prefs);
+    if (sameSet) {
+      // Already shown these options — don't re-dump cards. Continue the
+      // conversation: answer questions about them, handle a visit, thanks, etc.
+      mode = "followup";
+      const dataBlock = buildFollowupBlock(matches, firstName(prefs));
+      reply =
+        (llmAvailable() &&
+          (await safePhrase(() =>
+            phraseFollowup({ history: llmHistory, userName: firstName(prefs), dataBlock })
+          ))) ||
+        fallbackFollowup(prefs);
+    } else {
+      mode = isAlternatives ? "alternatives" : "recommend";
+      recommendations = matches.map(formatRecommendation);
+      const documentChunks = await retrieveChunks(prefs, matches);
+      // If a budget was given but we hold no list prices, be upfront about it.
+      const budgetGiven = prefs.budget_min != null || prefs.budget_max != null;
+      const noPrices = matches.every((m) => !m.property.price_text);
+      const note =
+        budgetGiven && noPrices
+          ? "The customer mentioned a budget, but we have NO list prices for these projects. Do not say anything is within, over or under budget. Warmly acknowledge that you don't have exact pricing on hand and that our advisors will share it, then focus on area and configuration fit."
+          : null;
+      const dataBlock = buildRecommendBlock(matches, isAlternatives, documentChunks, firstName(prefs), note);
+      reply =
+        (llmAvailable() &&
+          (await safePhrase(() =>
+            phraseRecommend({ history: llmHistory, userName: firstName(prefs), dataBlock })
+          ))) ||
+        fallbackRecommend(matches, isAlternatives, prefs);
+    }
+    prefs._rec_ids = ids; // remember what we showed so we don't re-dump it
   }
 
-  // 7. Save reply, return.
+  // 7. Persist prefs (incl. the set we last showed) + save the reply.
+  await upsertLead(sessionId, prefs, leadScore);
   await saveMessage(sessionId, "assistant", reply);
   return { reply, mode, recommendations, leadScore, leadTier: leadTier(leadScore), prefs };
 }
