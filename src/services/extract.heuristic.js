@@ -132,8 +132,21 @@ export function extractHeuristic(message, pendingSlot, prefs) {
       break;
     }
     case "has_parents": {
+      // This is asked together with the children question. A bare "yes"/"no"
+      // answers BOTH; only split them if the user differentiates (e.g. mentions
+      // parents or kids specifically).
       const yn = parseYesNo(low);
-      if (yn !== null) out.has_parents = yn;
+      if (yn !== null) {
+        out.has_parents = yn;
+        const words = low.replace(/[^a-z\s]/g, "").split(/\s+/).filter(Boolean);
+        const YN_ONLY = new Set([
+          "yes", "yeah", "yep", "yup", "yess", "sure", "haan", "ya", "both",
+          "no", "nope", "nah", "none", "neither", "ok", "okay", "definitely",
+          "absolutely", "correct", "right", "please", "thanks", "sir", "maam",
+        ]);
+        const bare = words.length > 0 && words.every((w) => YN_ONLY.has(w));
+        if (bare) out.has_children = yn;
+      }
       break;
     }
     case "has_children": {
