@@ -1,6 +1,6 @@
 // Deterministic matching over property rows. No LLM here.
 // The DB query lives in the caller; these functions take plain rows.
-import { asArray, areaZone, zoneDistance } from "../utils/normalize.js";
+import { asArray, coordOf, areaKm } from "../utils/normalize.js";
 import {
   scoreProperty,
   sameLocation,
@@ -47,11 +47,11 @@ export function findRecommendations(prefs, props, limit = 3) {
       pool = local;
     } else {
       // No inventory in or near the requested area — offer the geographically
-      // CLOSEST areas (by south->north zone), not the highest score anywhere.
-      const reqZone = areaZone(prefs.preferred_location);
+      // CLOSEST areas by real distance, not the highest score anywhere.
+      const reqCoord = coordOf(prefs.preferred_location);
       pool = ranked.slice().sort((a, b) => {
-        const da = zoneDistance(reqZone, areaZone(a.property.location) ?? areaZone(a.property.micro_location));
-        const db = zoneDistance(reqZone, areaZone(b.property.location) ?? areaZone(b.property.micro_location));
+        const da = areaKm(reqCoord, coordOf(a.property.location) ?? coordOf(a.property.micro_location));
+        const db = areaKm(reqCoord, coordOf(b.property.location) ?? coordOf(b.property.micro_location));
         return da - db || b.score - a.score;
       });
       geoFallback = true;

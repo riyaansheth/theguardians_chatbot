@@ -1,5 +1,8 @@
 // Pure scoring. No DB, no LLM. Deterministic and unit-testable.
-import { norm, eq, locMatch, bhkNumber, asArray, clusterOf } from "./normalize.js";
+import { norm, eq, locMatch, bhkNumber, asArray, clusterOf, coordOf, areaKm } from "./normalize.js";
+
+// Two localities within this many km count as "nearby".
+const NEAR_KM = 5;
 
 // ---- Location ----
 export function sameLocation(prefLoc, prop) {
@@ -9,6 +12,10 @@ export function sameLocation(prefLoc, prop) {
 
 export function nearbyLocation(prefLoc, prop) {
   if (!prefLoc || sameLocation(prefLoc, prop)) return false;
+  // Prefer real coordinate distance; fall back to clusters if coords unknown.
+  const ca = coordOf(prefLoc);
+  const cb = coordOf(prop.location) ?? coordOf(prop.micro_location);
+  if (ca && cb) return areaKm(ca, cb) <= NEAR_KM;
   const a = clusterOf(prefLoc);
   const b = clusterOf(prop.location) ?? clusterOf(prop.micro_location);
   return a != null && a === b;
