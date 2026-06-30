@@ -39,6 +39,11 @@ const NON_NAME = new Set([
 ]);
 
 function cleanName(text) {
+  // If it reads like a request/sentence rather than a name, it's NOT a name
+  // (avoids grabbing "for" out of "looking for a home").
+  if (/\b(looking|want|need|home|house|flat|apartment|property|propert|family|buy|rent|invest|bhk|budget|crore|lakh|area|location|self[\s-]?use|search|prefer)\b/i.test(text)) {
+    return null;
+  }
   const t = String(text)
     .replace(/\b(my name is|i am|i'?m|this is|name'?s|it'?s|call me)\b/gi, "")
     .replace(/[^A-Za-z\s.]/g, "")

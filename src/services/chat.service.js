@@ -360,8 +360,8 @@ export async function handleChat({ sessionId, message, pageUrl }) {
     const askCount = historyBefore.filter((m) => m.role === "assistant").length;
     const style =
       askCount <= 1
-        ? "Tone: warm and welcoming."
-        : "Tone: concise and businesslike now — at most a brief 3–7 word acknowledgement, then the question. No compliments, no exclamation marks, don't use their name this turn, and don't explain why you're asking.";
+        ? "Tone: warm and welcoming; one genuine sentence, then the question."
+        : "Tone: efficient but helpful — briefly and specifically reflect what they just said, add one short true insight if you have a relevant one (not empty praise), then ask the next thing. 1–2 sentences. Don't gush, don't compliment every turn, vary your wording, and never reply with a bare 'Understood.'";
     reply =
       (llmAvailable() &&
         (await safePhrase(() =>
