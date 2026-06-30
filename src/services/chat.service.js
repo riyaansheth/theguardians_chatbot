@@ -12,7 +12,7 @@ import { findRecommendations } from "./matching.service.js";
 import { retrieveChunksForProperties } from "./embedding.service.js";
 import { firstMissingSlot, nextQuestion } from "../utils/questions.js";
 import { scoreLead, leadTier, deriveTargetBHK } from "../utils/scoring.js";
-import { bhkNumber } from "../utils/normalize.js";
+import { bhkNumber, canonicalArea } from "../utils/normalize.js";
 import { isValidIndianPhone, normalizePhone, isValidEmail } from "../utils/validate.js";
 import { extractHeuristic } from "./extract.heuristic.js";
 
@@ -265,6 +265,12 @@ export async function handleChat({ sessionId, message, pageUrl }) {
   // "start over / forget everything" — wipe collected preferences and restart.
   if (/\b(start over|start again|restart|reset|forget (everything|what i (said|told|mentioned))|begin again|new search|clear (everything|all|it all))\b/i.test(message)) {
     for (const k of Object.keys(prefs)) delete prefs[k];
+  }
+
+  // Normalise a (possibly misspelled) area to its real name — "dadr" -> "Dadar".
+  if (prefs.preferred_location) {
+    const ca = canonicalArea(prefs.preferred_location);
+    if (ca) prefs.preferred_location = ca.replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
   // "a bedroom for each / individual bedrooms" means one bedroom per person, so

@@ -54,16 +54,15 @@ export const EXTRACT_TOOL = {
   },
 };
 
-const EXTRACT_SYSTEM =
-  "You extract structured real-estate preferences from the conversation. " +
-  "Call extract_preferences with ONLY the fields the user EXPLICITLY stated. " +
-  "Do not guess or infer unstated fields. " +
-  "CRITICAL: never infer a budget from numbers that are not money — the number of " +
-  "brothers, family members, earning members or bedrooms is NOT a budget. Only set " +
-  "budget_min/budget_max when the user states an amount in money terms (e.g. lakh, " +
-  "crore, ₹). Only set earning_members if the user explicitly states it. " +
-  "Counts of people/bedrooms map to family_members or bhk, never to budget. " +
-  "Prices are in Indian Rupees (1 crore = 10,000,000; 1 lakh = 100,000).";
+const EXTRACT_SYSTEM = `You are an elite real-estate intake analyst with deep understanding of how people actually talk. Read the WHOLE conversation — including casual, messy, misspelled, slang, Hinglish, or long multi-requirement sentences — and extract every preference the customer states OR clearly implies into extract_preferences. Think carefully and be thorough, but precise.
+
+Understand and normalise:
+- TYPOS / area names: correct obvious misspellings to the intended Mumbai locality — "dadr"→Dadar, "powaii"→Powai, "chambur"/"chembur"→Chembur, "bandra west"/"bandstand"→Bandra, "gtb nagar"→Sion area. Output the clean area name.
+- IMPLIED facts: "my parents will live with us"→has_parents true; "our two kids"/"a toddler"/"my son"→has_children true; "just me"→family_members 1; "me, my wife and 2 kids"→family_members 4 + has_children true; "me and my folks"→has_parents true; "near my office in BKC"→workplace_location "BKC"; "close to my kid's school in Powai"→school_or_college_location "Powai" + has_children true; "ready to move so we can shift soon"→possession_preference "ready"; "still under construction is fine"→possession_preference "under-construction"; "to rent out"/"for returns"→purpose "investment"; "for us to live in"→purpose "self-use"; "office"/"shop"/"showroom"→property_type "commercial"; a home for a family→property_type "residential".
+- BUDGETS in any form: "2.5 cr", "1.8-2 crore", "90 lakh", "₹3cr", "around 5 cr", "5-6cr". Use lakh/crore (1 crore = 10,000,000; 1 lakh = 100,000). For a range set budget_min and budget_max; for a single figure set budget_max (and budget_min if a clear floor is implied).
+- CONFIGURATION: "3bhk", "3 bedroom", "2 & 3 bhk", "jodi/duplex". If the customer wants a bedroom for EACH of N people ("a room for everyone", "individual bedrooms for all 5"), set bhk to N.
+
+CRITICAL — never fabricate. Only set a field the user said or clearly implied; otherwise OMIT it. A number of brothers, family members, bedrooms, floors, ages, or a phone number is NOT a budget — never invent budget_min/budget_max or any figure the user didn't give. When unsure, leave it out rather than guess.`;
 
 // Shared persona — THE GUARDIAN behaves like a seasoned human advisor, per
 // personality.md. Both the "ask" and "recommend" prompts build on this.
