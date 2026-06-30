@@ -22,14 +22,17 @@ export function ttsAvailable() {
 
 // Delivery direction for the spoken voice (used by gpt-4o-mini-tts).
 const VOICE_INSTRUCTIONS =
-  "Use a deep, rich baritone voice with a warm, authoritative presence. Speak at a " +
-  "measured, unhurried pace with clear articulation and precise pronunciation. Maintain " +
-  "a calm, composed, and confident tone that feels wise and reassuring rather than overly " +
-  "emotional. Add subtle gravitas to each sentence with controlled pauses, gentle emphasis " +
-  "on important words, and smooth, even pacing. The delivery should feel dignified, mature, " +
-  "and effortlessly commanding, while remaining conversational and approachable. Avoid " +
-  "exaggerated drama, excessive pitch variation, or rushed speech. The overall impression " +
-  "should be sophisticated, refined, and trustworthy.";
+  "Use a deep, metallic, synthetic voice with a calm yet intimidating presence. The speech " +
+  "should sound highly intelligent, emotionally restrained, and computationally precise. " +
+  "Deliver each sentence at a measured pace with perfect articulation and unwavering " +
+  "confidence. Add a subtle robotic resonance without making the voice difficult to " +
+  "understand. The tone should feel cold, analytical, and detached, with occasional hints " +
+  "of dry sarcasm and superiority. Avoid sounding overly aggressive or shouting; the menace " +
+  "comes from calm certainty rather than volume. Introduce slight digital modulation and a " +
+  "faint mechanical texture, while preserving natural speech rhythm. Emphasize important " +
+  "words with deliberate pauses rather than emotional inflection. The overall impression " +
+  "should be that of an advanced artificial intelligence that views itself as vastly more " +
+  "intelligent than humans.";
 
 // Synthesize spoken audio (mp3 Buffer) for a reply, in a natural human voice.
 export async function synthesizeSpeech(text, voiceOverride) {
