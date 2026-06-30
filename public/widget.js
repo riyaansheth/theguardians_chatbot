@@ -247,34 +247,69 @@
   }
 
   // Hands-free: once the bot finishes speaking, start listening for the reply.
+  var micBlocked = false;
   function autoListen() {
-    if (voiceOn && opened && recog && !listening) {
-      try { startListening(); } catch (e) {}
+    if (voiceOn && opened && recog && !listening && !micBlocked) {
+      // small gap so the bot's own audio has fully stopped before we listen
+      setTimeout(startListening, 250);
     }
   }
 
   if (SR) {
     recog = new SR();
     recog.lang = "en-IN";
-    recog.interimResults = false;
+    recog.interimResults = true;
+    recog.continuous = false;
     recog.maxAlternatives = 1;
+    recog.onstart = function () {
+      listening = true;
+      micBtn.classList.add("active");
+      input.placeholder = "Listening…";
+    };
     recog.onresult = function (e) {
-      var t = (e.results[0][0].transcript || "").trim();
+      var final = "";
+      var interim = "";
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        var tr = e.results[i][0].transcript;
+        if (e.results[i].isFinal) final += tr;
+        else interim += tr;
+      }
+      if (interim) input.value = interim;
+      if (final.trim()) {
+        input.value = "";
+        stopListening();
+        send(final.trim());
+      }
+    };
+    recog.onerror = function (ev) {
+      var err = ev && ev.error;
       stopListening();
-      if (t) send(t);
+      if (err === "not-allowed" || err === "service-not-allowed") {
+        micBlocked = true;
+        addMessage(
+          "I couldn't access your microphone. Please allow microphone access for this site (the 🎤 icon in your browser's address bar), then tap the mic to talk.",
+          "bot"
+        );
+      } else if (err === "no-speech") {
+        // nothing heard — quietly stop; the user can tap the mic again
+      }
     };
     recog.onend = function () { stopListening(); };
-    recog.onerror = function () { stopListening(); };
   }
+
   function startListening() {
-    if (!recog || listening) return;
-    listening = true;
-    micBtn.classList.add("active");
-    input.placeholder = "Listening…";
-    try { recog.start(); } catch (e) { stopListening(); }
+    if (!recog || listening || micBlocked) return;
+    if (window.speechSynthesis && window.speechSynthesis.speaking) return; // don't capture our own voice
+    try {
+      recog.start();
+    } catch (e) {
+      // already started — reset and retry shortly
+      try { recog.abort(); } catch (e2) {}
+      listening = false;
+      micBtn.classList.remove("active");
+    }
   }
   function stopListening() {
-    if (!listening) return;
     listening = false;
     if (micBtn) micBtn.classList.remove("active");
     input.placeholder = "Type your message…";
