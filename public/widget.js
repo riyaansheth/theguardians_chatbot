@@ -12,8 +12,11 @@
   var scriptSrc = scriptEl ? scriptEl.src : "";
   var base = scriptSrc ? scriptSrc.replace(/\/[^/]*$/, "/") : "/";
   var apiUrl = cfg.apiUrl || base + "api/chat";
+  var sessionUrl = apiUrl.replace(/\/chat\/?$/, "/session/");
   var cssUrl = cfg.cssUrl || base + "widget.css";
   var botName = cfg.botName || "THE GUARDIAN";
+  var GREETING =
+    "Hello, and welcome to The Guardians. I'd be glad to help you find the right home. May I know your name?";
 
   function uuid() {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -24,10 +27,25 @@
     });
   }
 
-  // A fresh session per page load, so refreshing the browser restarts the chat.
-  var SESSION_ID = uuid();
-  function sessionId() {
-    return SESSION_ID;
+  // Session persists across refreshes (context memory). The ↻ button / "start
+  // over" starts a fresh one.
+  var SESSION_KEY = "tg_session_id";
+  var SESSION_ID = (function () {
+    try {
+      var id = localStorage.getItem(SESSION_KEY);
+      if (!id) {
+        id = uuid();
+        localStorage.setItem(SESSION_KEY, id);
+      }
+      return id;
+    } catch (e) {
+      return uuid();
+    }
+  })();
+  function sessionId() { return SESSION_ID; }
+  function newSession() {
+    SESSION_ID = uuid();
+    try { localStorage.setItem(SESSION_KEY, SESSION_ID); } catch (e) {}
   }
 
   // ---- build DOM inside a shadow root ----
@@ -41,6 +59,9 @@
   link.href = cssUrl;
   shadow.appendChild(link);
 
+  var micSvg =
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.92V21h2v-3.08A7 7 0 0019 11h-2z"/></svg>';
+
   var root = document.createElement("div");
   root.className = "tg-root";
   root.innerHTML =
@@ -49,6 +70,7 @@
         '<div><div class="tg-title">' + botName + "</div>" +
         '<div class="tg-sub">Real estate concierge</div></div>' +
         '<div class="tg-actions">' +
+          '<button class="tg-speak" aria-label="Toggle voice replies" title="Voice replies">&#128263;</button>' +
           '<button class="tg-restart" aria-label="Start over" title="Start over">&#10227;</button>' +
           '<button class="tg-close" aria-label="Close">&times;</button>' +
         "</div>" +
@@ -56,8 +78,9 @@
       '<div class="tg-messages"></div>' +
       '<div class="tg-suggestions"></div>' +
       '<form class="tg-input">' +
+        '<button type="button" class="tg-mic" aria-label="Speak" title="Speak">' + micSvg + "</button>" +
         '<input type="text" autocomplete="off" placeholder="Type your message…" aria-label="Message" />' +
-        "<button type=\"submit\">Send</button>" +
+        '<button type="submit">Send</button>' +
       "</form>" +
     "</div>" +
     '<button class="tg-launcher" aria-label="Open chat">' +
@@ -65,15 +88,17 @@
     "</button>";
   shadow.appendChild(root);
 
-  var panel = root.querySelector(".tg-panel");
+  var root_ = root;
   var launcher = root.querySelector(".tg-launcher");
   var closeBtn = root.querySelector(".tg-close");
   var messagesEl = root.querySelector(".tg-messages");
   var form = root.querySelector(".tg-input");
   var input = form.querySelector("input");
-  var sendBtn = form.querySelector("button");
+  var sendBtn = form.querySelector("button[type=submit]");
   var restartBtn = root.querySelector(".tg-restart");
   var suggestionsEl = root.querySelector(".tg-suggestions");
+  var micBtn = root.querySelector(".tg-mic");
+  var speakBtn = root.querySelector(".tg-speak");
 
   var STARTERS = ["2 BHK in Bandra", "Sea-facing 3 BHK in Worli", "Ready homes in Andheri"];
 
@@ -88,7 +113,6 @@
     });
   }
 
-  // Light, safe formatting for bot text: **bold**, *italic*, and line breaks.
   function renderRich(text) {
     return esc(text)
       .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
@@ -110,7 +134,6 @@
     return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
   }
 
-  // A polished property card rendered from structured data (prices are real).
   function addCard(rec) {
     var card = document.createElement("div");
     card.className = "tg-card";
@@ -157,36 +180,114 @@
     });
   }
 
+  function greet() {
+    addMessage(GREETING, "bot");
+    renderSuggestions();
+  }
+
+  // Restore the prior conversation (context memory) or greet if it's new.
+  function restoreOrGreet() {
+    fetch(sessionUrl + encodeURIComponent(SESSION_ID))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        var msgs = data && data.messages;
+        if (msgs && msgs.length) {
+          msgs.forEach(function (m) { addMessage(m.content, m.role === "user" ? "user" : "bot"); });
+        } else {
+          greet();
+        }
+      })
+      .catch(greet);
+  }
+
   function openPanel() {
     opened = true;
-    root.classList.add("tg-open");
+    root_.classList.add("tg-open");
     input.focus();
     if (!greeted) {
       greeted = true;
-      addMessage(
-        "Hello, and welcome to The Guardians. I'd be glad to help you find the right home. May I know your name?",
-        "bot"
-      );
-      renderSuggestions();
+      restoreOrGreet();
     }
   }
   function closePanel() {
     opened = false;
-    root.classList.remove("tg-open");
+    root_.classList.remove("tg-open");
+    stopListening();
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
   }
 
-  // Start a brand-new conversation (new session, cleared transcript).
   function restartChat() {
-    SESSION_ID = uuid();
+    newSession();
     messagesEl.innerHTML = "";
     clearSuggestions();
-    greeted = false;
-    openPanel();
+    greeted = true;
+    opened = true;
+    root_.classList.add("tg-open");
+    input.focus();
+    greet();
   }
 
-  launcher.addEventListener("click", function () {
-    opened ? closePanel() : openPanel();
+  // ---- voice: browser Web Speech API (speech-to-text + text-to-speech) ----
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var recog = null;
+  var listening = false;
+  var voiceOn = false;
+
+  if (!SR && micBtn) micBtn.style.display = "none";
+
+  function speak(text) {
+    if (!voiceOn || !window.speechSynthesis) return;
+    try {
+      window.speechSynthesis.cancel();
+      var clean = String(text).replace(/[*_#`]/g, "").replace(/\s+/g, " ").slice(0, 600);
+      var u = new SpeechSynthesisUtterance(clean);
+      u.lang = "en-IN";
+      u.rate = 1.03;
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+
+  if (SR) {
+    recog = new SR();
+    recog.lang = "en-IN";
+    recog.interimResults = false;
+    recog.maxAlternatives = 1;
+    recog.onresult = function (e) {
+      var t = (e.results[0][0].transcript || "").trim();
+      stopListening();
+      if (t) send(t);
+    };
+    recog.onend = function () { stopListening(); };
+    recog.onerror = function () { stopListening(); };
+  }
+  function startListening() {
+    if (!recog || listening) return;
+    listening = true;
+    micBtn.classList.add("active");
+    input.placeholder = "Listening…";
+    try { recog.start(); } catch (e) { stopListening(); }
+  }
+  function stopListening() {
+    if (!listening) return;
+    listening = false;
+    if (micBtn) micBtn.classList.remove("active");
+    input.placeholder = "Type your message…";
+    try { recog && recog.stop(); } catch (e) {}
+  }
+
+  if (micBtn) {
+    micBtn.addEventListener("click", function () {
+      listening ? stopListening() : startListening();
+    });
+  }
+  speakBtn.addEventListener("click", function () {
+    voiceOn = !voiceOn;
+    speakBtn.classList.toggle("active", voiceOn);
+    speakBtn.innerHTML = voiceOn ? "&#128266;" : "&#128263;"; // 🔊 / 🔇
+    if (!voiceOn && window.speechSynthesis) window.speechSynthesis.cancel();
   });
+
+  launcher.addEventListener("click", function () { opened ? closePanel() : openPanel(); });
   closeBtn.addEventListener("click", closePanel);
   restartBtn.addEventListener("click", restartChat);
 
@@ -200,19 +301,17 @@
     fetch(apiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sessionId: sessionId(),
-        message: text,
-        pageUrl: window.location.href,
-      }),
+      body: JSON.stringify({ sessionId: sessionId(), message: text, pageUrl: window.location.href }),
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
         typing.remove();
-        addMessage(data && data.reply ? data.reply : "Sorry, something went wrong. Please try again.", "bot");
+        var reply = data && data.reply ? data.reply : "Sorry, something went wrong. Please try again.";
+        addMessage(reply, "bot");
         if (data && data.recommendations && data.recommendations.length) {
           data.recommendations.forEach(addCard);
         }
+        speak(reply);
       })
       .catch(function () {
         typing.remove();
