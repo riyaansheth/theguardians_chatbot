@@ -2,13 +2,15 @@
 
 // We only ask for the name; no contact details are requested. A phone is still
 // captured if the customer volunteers it, but the bot never asks for it.
+// parents/children are NOT asked as blocking steps — they're captured
+// opportunistically (from "my parents", "a kid", "no one else", etc.) and used
+// for amenity/suitability scoring. This keeps the flow short and avoids looping
+// on an optional question the customer never directly answers.
 export const QUESTION_ORDER = [
   ["name", "May I know your name?"],
   ["purpose", "Are you looking at this for self-use, investment, or both?"],
   ["property_type", "Are you looking for residential or commercial?"],
   ["family_members", "How many family members would be staying here?"],
-  ["has_parents", "Will your parents be staying with you?"],
-  ["has_children", "Do you have children, or plan to, who would stay there?"],
   ["preferred_location", "Which area or location do you prefer?"],
   ["bhk", "What configuration are you after — 2, 3, 4 BHK, or something larger?"],
   ["budget_min", "And what budget range are you working with?"],
