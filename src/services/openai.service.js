@@ -20,15 +20,29 @@ export function ttsAvailable() {
   return client !== null;
 }
 
+// Delivery direction for the spoken voice (used by gpt-4o-mini-tts).
+const VOICE_INSTRUCTIONS =
+  "Use a deep, rich baritone voice with a warm, authoritative presence. Speak at a " +
+  "measured, unhurried pace with clear articulation and precise pronunciation. Maintain " +
+  "a calm, composed, and confident tone that feels wise and reassuring rather than overly " +
+  "emotional. Add subtle gravitas to each sentence with controlled pauses, gentle emphasis " +
+  "on important words, and smooth, even pacing. The delivery should feel dignified, mature, " +
+  "and effortlessly commanding, while remaining conversational and approachable. Avoid " +
+  "exaggerated drama, excessive pitch variation, or rushed speech. The overall impression " +
+  "should be sophisticated, refined, and trustworthy.";
+
 // Synthesize spoken audio (mp3 Buffer) for a reply, in a natural human voice.
 export async function synthesizeSpeech(text, voiceOverride) {
   if (!client) return null;
-  const res = await client.audio.speech.create({
+  const params = {
     model: env.openaiTtsModel,
     voice: voiceOverride || env.openaiTtsVoice,
     input: String(text).replace(/[*_#`]/g, "").slice(0, 2000),
     response_format: "mp3",
-  });
+  };
+  // Only the gpt-4o(-mini)-tts models can be steered with delivery instructions.
+  if (/gpt-4o.*tts/i.test(env.openaiTtsModel)) params.instructions = VOICE_INSTRUCTIONS;
+  const res = await client.audio.speech.create(params);
   return Buffer.from(await res.arrayBuffer());
 }
 
