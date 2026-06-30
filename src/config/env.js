@@ -32,6 +32,8 @@ export const env = {
 
   openaiApiKey: required("OPENAI_API_KEY"),
   openaiChatModel: optional("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
+  // Extraction is structured work — a fast model keeps each turn snappy.
+  openaiExtractModel: optional("OPENAI_EXTRACT_MODEL", "gpt-4o-mini"),
   openaiEmbeddingModel: optional("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
   // gpt-4o-mini-tts supports steering the delivery via an instructions prompt.
   openaiTtsModel: optional("OPENAI_TTS_MODEL", "gpt-4o-mini-tts"),

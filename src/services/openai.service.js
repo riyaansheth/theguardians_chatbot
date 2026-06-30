@@ -155,7 +155,7 @@ Never state specific PROPERTY facts (exact prices, project names, availability, 
 export async function extractPreferences(openAIMessages) {
   if (!client) return null;
   const res = await client.chat.completions.create({
-    model: env.openaiChatModel,
+    model: env.openaiExtractModel,
     temperature: 0,
     messages: [{ role: "system", content: EXTRACT_SYSTEM }, ...openAIMessages],
     tools: [EXTRACT_TOOL],

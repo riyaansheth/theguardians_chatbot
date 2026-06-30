@@ -34,13 +34,16 @@ const corsOptions = {
 app.use("/api", cors(corsOptions));
 app.options("/api/*", cors(corsOptions));
 
-// Rate limiting: a general cap on the API, and a stricter one on /api/chat
-// (each chat turn triggers LLM calls, so this protects cost + abuse).
-app.use("/api", rateLimit({ windowMs: 60_000, max: 300 }));
+// Rate limiting: a generous umbrella cap, plus separate per-endpoint caps so the
+// voice endpoints can never exhaust the chat budget (or vice-versa). Limits are
+// well above what a human can do, but stop runaway loops / abuse and protect cost.
+app.use("/api", rateLimit({ windowMs: 60_000, max: 600 }));
 app.use(
   "/api/chat",
-  rateLimit({ windowMs: 60_000, max: 45, message: "You're sending messages a bit too quickly — give me a few seconds and try again." })
+  rateLimit({ windowMs: 60_000, max: 60, message: "You're sending messages a bit too quickly — give me a few seconds and try again." })
 );
+app.use("/api/transcribe", rateLimit({ windowMs: 60_000, max: 60 }));
+app.use("/api/tts", rateLimit({ windowMs: 60_000, max: 100 }));
 
 app.use(express.json());
 
