@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Voice diagnostic — THE GUARDIAN</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 18px; color: #16233a; }
+    h1 { font-size: 20px; }
+    button { font-size: 16px; padding: 12px 20px; border: none; border-radius: 10px; background: #1c4d80; color: #fff; cursor: pointer; }
+    button.stop { background: #c0392b; }
+    .row { margin: 14px 0; }
+    .ok { color: #1e7e34; font-weight: 600; }
+    .bad { color: #c0392b; font-weight: 600; }
+    #log { background: #0f2c4d; color: #d7e3f4; font-family: ui-monospace, Menlo, monospace; font-size: 13px; padding: 14px; border-radius: 10px; height: 280px; overflow: auto; white-space: pre-wrap; }
+    #heard { font-size: 18px; min-height: 28px; color: #0f2c4d; }
+    .env { background: #f4f6fa; border: 1px solid #e3e8ee; border-radius: 10px; padding: 12px 14px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>🎤 Voice input diagnostic</h1>
+  <p>This checks your browser's speech-to-text directly. Click <b>Start mic</b>, allow the microphone, and speak. Tell me what the log shows.</p>
+
+  <div class="env" id="env"></div>
+
+  <div class="row">
+    <button id="startBtn">Start mic</button>
+    <button id="stopBtn" class="stop" style="display:none">Stop</button>
+  </div>
+
+  <div class="row"><b>Heard:</b> <span id="heard"></span></div>
+  <div class="row"><b>Event log:</b></div>
+  <div id="log"></div>
+
+  <script>
+    var logEl = document.getElementById("log");
+    var heardEl = document.getElementById("heard");
+    function log(msg, cls) {
+      var t = new Date().toLocaleTimeString();
+      logEl.textContent += "[" + t + "] " + msg + "\n";
+      logEl.scrollTop = logEl.scrollHeight;
+      if (cls) { var s = document.createElement("span"); }
+    }
+
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    var env = document.getElementById("env");
+    env.innerHTML =
+      "Browser secure context (needed): <b class='" + (window.isSecureContext ? "ok'>yes" : "bad'>NO — use localhost or https") + "</b><br>" +
+      "SpeechRecognition supported: <b class='" + (SR ? "ok'>yes" : "bad'>NO — use Chrome or Edge") + "</b><br>" +
+      "getUserMedia (mic) available: <b class='" + (navigator.mediaDevices && navigator.mediaDevices.getUserMedia ? "ok'>yes" : "bad'>NO") + "</b><br>" +
+      "URL: <b>" + location.href + "</b>";
+
+    var recog = null;
+    if (SR) {
+      recog = new SR();
+      recog.lang = "en-IN";
+      recog.interimResults = true;
+      recog.continuous = false;
+      recog.onstart = function () { log("onstart — listening…"); };
+      recog.onaudiostart = function () { log("onaudiostart — mic capturing audio"); };
+      recog.onspeechstart = function () { log("onspeechstart — speech detected"); };
+      recog.onresult = function (e) {
+        var f = "", i = "";
+        for (var k = e.resultIndex; k < e.results.length; k++) {
+          if (e.results[k].isFinal) f += e.results[k][0].transcript;
+          else i += e.results[k][0].transcript;
+        }
+        if (i) heardEl.textContent = i;
+        if (f) { heardEl.textContent = f; log("RESULT (final): " + JSON.stringify(f)); }
+      };
+      recog.onerror = function (ev) { log("onerror: " + (ev.error || ev.message || "unknown"), "bad"); };
+      recog.onend = function () { log("onend — stopped"); toggle(false); };
+    }
+
+    function toggle(on) {
+      document.getElementById("startBtn").style.display = on ? "none" : "inline-block";
+      document.getElementById("stopBtn").style.display = on ? "inline-block" : "none";
+    }
+
+    document.getElementById("startBtn").addEventListener("click", function () {
+      heardEl.textContent = "";
+      if (!SR) { log("SpeechRecognition NOT supported in this browser.", "bad"); return; }
+      log("Requesting microphone permission…");
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(function (stream) {
+          stream.getTracks().forEach(function (t) { t.stop(); });
+          log("Microphone permission GRANTED.");
+          try { recog.start(); toggle(true); }
+          catch (e) { log("recog.start() threw: " + e.message, "bad"); }
+        })
+        .catch(function (err) {
+          log("Microphone permission DENIED / error: " + err.name + " — " + err.message, "bad");
+        });
+    });
+
+    document.getElementById("stopBtn").addEventListener("click", function () {
+      try { recog.stop(); } catch (e) {}
+      toggle(false);
+    });
+  </script>
+</body>
+</html>

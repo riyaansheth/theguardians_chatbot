@@ -297,16 +297,38 @@
     recog.onend = function () { stopListening(); };
   }
 
-  function startListening() {
-    if (!recog || listening || micBlocked) return;
-    if (window.speechSynthesis && window.speechSynthesis.speaking) return; // don't capture our own voice
+  var micGranted = false;
+  function actuallyStart() {
+    if (!recog || listening) return;
     try {
       recog.start();
     } catch (e) {
-      // already started — reset and retry shortly
       try { recog.abort(); } catch (e2) {}
       listening = false;
       micBtn.classList.remove("active");
+    }
+  }
+  function startListening() {
+    if (!recog || listening || micBlocked) return;
+    if (window.speechSynthesis && window.speechSynthesis.speaking) return; // don't capture our own voice
+    // Pre-flight the mic permission (a more reliable prompt than SpeechRecognition's).
+    if (!micGranted && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices
+        .getUserMedia({ audio: true })
+        .then(function (stream) {
+          stream.getTracks().forEach(function (t) { t.stop(); });
+          micGranted = true;
+          actuallyStart();
+        })
+        .catch(function () {
+          micBlocked = true;
+          addMessage(
+            "I couldn't access your microphone. Please allow mic access for this site (click the 🎤/lock icon in the address bar → Allow), then tap the mic to talk.",
+            "bot"
+          );
+        });
+    } else {
+      actuallyStart();
     }
   }
   function stopListening() {
