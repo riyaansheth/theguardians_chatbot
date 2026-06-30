@@ -1,8 +1,21 @@
 import { Router } from "express";
+import multer from "multer";
 import { handleChat, getSessionMessages } from "../services/chat.service.js";
-import { synthesizeSpeech, ttsAvailable } from "../services/openai.service.js";
+import { synthesizeSpeech, ttsAvailable, transcribeAudio } from "../services/openai.service.js";
 
 const router = Router();
+const audioUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
+
+// POST /api/transcribe (multipart 'audio') -> { text } via Whisper
+router.post("/transcribe", audioUpload.single("audio"), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "audio is required" });
+    const text = await transcribeAudio(req.file.buffer, req.file.originalname || "speech.webm");
+    res.json({ text });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // POST /api/tts { text, voice? } -> mp3 audio, a natural human voice for replies
 router.post("/tts", async (req, res, next) => {

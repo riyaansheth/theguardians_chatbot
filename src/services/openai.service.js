@@ -1,7 +1,7 @@
 // OpenAI is used for exactly two things: (a) extract structured slots from a
 // user message via function-calling, (b) phrase a reply grounded ONLY in the
 // data we pass it. It never decides flow and never sources facts.
-import OpenAI from "openai";
+import OpenAI, { toFile } from "openai";
 import { env } from "../config/env.js";
 
 // Treat obvious placeholders as "no key" so the app degrades gracefully offline.
@@ -18,6 +18,18 @@ export function llmAvailable() {
 
 export function ttsAvailable() {
   return client !== null;
+}
+
+// Transcribe recorded audio (a Buffer) to text via Whisper. Works in any browser.
+export async function transcribeAudio(buffer, filename) {
+  if (!client) return "";
+  const file = await toFile(buffer, filename || "speech.webm");
+  const res = await client.audio.transcriptions.create({
+    file,
+    model: "whisper-1",
+    language: "en",
+  });
+  return (res.text || "").trim();
 }
 
 // Delivery direction for the spoken voice (used by gpt-4o-mini-tts).

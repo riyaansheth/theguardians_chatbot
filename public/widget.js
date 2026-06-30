@@ -200,15 +200,15 @@
     speak(GREETING, autoListen);
   }
 
-  // ---- voice: browser Web Speech API (speech-to-text + text-to-speech) ----
-  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  var recog = null;
+  // ---- voice: OpenAI TTS (speak) + MediaRecorder -> Whisper (listen) ----
+  // Browser SpeechRecognition is unreliable (only real Google Chrome reaches its
+  // cloud service, so Brave/Arc/etc. fail with a "network" error). We record the
+  // mic and transcribe server-side via Whisper, which works in every browser.
   var listening = false;
   var voiceOn = true; // voice replies on by default
 
-  if (!SR && micBtn) micBtn.style.display = "none";
-
   var ttsUrl = apiUrl.replace(/\/chat\/?$/, "/tts");
+  var transcribeUrl = apiUrl.replace(/\/chat\/?$/, "/transcribe");
   var currentAudio = null;
 
   function stopVoice() {
@@ -246,96 +246,107 @@
       .catch(function () { browserSpeak(clean, onEnd); });
   }
 
-  // Hands-free: once the bot finishes speaking, start listening for the reply.
   var micBlocked = false;
+  var mediaRecorder = null;
+  var audioStream = null;
+  var audioChunks = [];
+  var audioCtx = null;
+  var heardSpeech = false;
+  var maxTimer = null;
+  var REC_OK = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+  if (!REC_OK && micBtn) micBtn.style.display = "none";
+
+  // Hands-free: once the bot finishes speaking, start listening for the reply.
   function autoListen() {
-    if (voiceOn && opened && recog && !listening && !micBlocked) {
-      // small gap so the bot's own audio has fully stopped before we listen
-      setTimeout(startListening, 250);
+    if (voiceOn && opened && REC_OK && !listening && !micBlocked) {
+      setTimeout(startListening, 300);
     }
   }
 
-  if (SR) {
-    recog = new SR();
-    recog.lang = "en-IN";
-    recog.interimResults = true;
-    recog.continuous = false;
-    recog.maxAlternatives = 1;
-    recog.onstart = function () {
-      listening = true;
-      micBtn.classList.add("active");
-      input.placeholder = "Listening…";
-    };
-    recog.onresult = function (e) {
-      var final = "";
-      var interim = "";
-      for (var i = e.resultIndex; i < e.results.length; i++) {
-        var tr = e.results[i][0].transcript;
-        if (e.results[i].isFinal) final += tr;
-        else interim += tr;
-      }
-      if (interim) input.value = interim;
-      if (final.trim()) {
-        input.value = "";
-        stopListening();
-        send(final.trim());
-      }
-    };
-    recog.onerror = function (ev) {
-      var err = ev && ev.error;
-      stopListening();
-      if (err === "not-allowed" || err === "service-not-allowed") {
+  function startListening() {
+    if (listening || micBlocked || !REC_OK) return;
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then(function (stream) {
+        audioStream = stream;
+        audioChunks = [];
+        heardSpeech = false;
+        listening = true;
+        micBtn.classList.add("active");
+        input.placeholder = "Listening…";
+        try { mediaRecorder = new MediaRecorder(stream); }
+        catch (e) { mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" }); }
+        mediaRecorder.ondataavailable = function (ev) { if (ev.data && ev.data.size) audioChunks.push(ev.data); };
+        mediaRecorder.onstop = finishRecording;
+        mediaRecorder.start();
+        monitorSilence(stream);
+        maxTimer = setTimeout(function () { stopListening(); }, 20000); // hard cap
+      })
+      .catch(function () {
         micBlocked = true;
         addMessage(
-          "I couldn't access your microphone. Please allow microphone access for this site (the 🎤 icon in your browser's address bar), then tap the mic to talk.",
+          "I couldn't access your microphone. Please allow mic access for this site (click the 🎤/lock icon in the address bar → Allow), then tap the mic to talk.",
           "bot"
         );
-      } else if (err === "no-speech") {
-        // nothing heard — quietly stop; the user can tap the mic again
-      }
-    };
-    recog.onend = function () { stopListening(); };
+      });
   }
 
-  var micGranted = false;
-  function actuallyStart() {
-    if (!recog || listening) return;
+  // Auto-stop ~1.2s after the user stops talking (or ~7s if they never start).
+  function monitorSilence(stream) {
     try {
-      recog.start();
-    } catch (e) {
-      try { recog.abort(); } catch (e2) {}
-      listening = false;
-      micBtn.classList.remove("active");
-    }
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      var source = audioCtx.createMediaStreamSource(stream);
+      var analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      source.connect(analyser);
+      var data = new Uint8Array(analyser.frequencyBinCount);
+      var startedAt = Date.now();
+      var lastLoud = 0;
+      function tick() {
+        if (!listening) return;
+        analyser.getByteFrequencyData(data);
+        var sum = 0;
+        for (var i = 0; i < data.length; i++) sum += data[i];
+        var avg = sum / data.length;
+        var now = Date.now();
+        if (avg > 14) { heardSpeech = true; lastLoud = now; }
+        if (heardSpeech && now - lastLoud > 1200) { stopListening(); return; }
+        if (!heardSpeech && now - startedAt > 7000) { stopListening(); return; }
+        requestAnimationFrame(tick);
+      }
+      tick();
+    } catch (e) {}
   }
-  function startListening() {
-    if (!recog || listening || micBlocked) return;
-    if (window.speechSynthesis && window.speechSynthesis.speaking) return; // don't capture our own voice
-    // Pre-flight the mic permission (a more reliable prompt than SpeechRecognition's).
-    if (!micGranted && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      navigator.mediaDevices
-        .getUserMedia({ audio: true })
-        .then(function (stream) {
-          stream.getTracks().forEach(function (t) { t.stop(); });
-          micGranted = true;
-          actuallyStart();
-        })
-        .catch(function () {
-          micBlocked = true;
-          addMessage(
-            "I couldn't access your microphone. Please allow mic access for this site (click the 🎤/lock icon in the address bar → Allow), then tap the mic to talk.",
-            "bot"
-          );
-        });
-    } else {
-      actuallyStart();
-    }
-  }
+
   function stopListening() {
+    if (!listening) return;
     listening = false;
     if (micBtn) micBtn.classList.remove("active");
+    clearTimeout(maxTimer);
+    try {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+      else finishRecording();
+    } catch (e) { finishRecording(); }
+  }
+
+  function finishRecording() {
+    if (audioStream) { audioStream.getTracks().forEach(function (t) { t.stop(); }); audioStream = null; }
+    if (audioCtx) { try { audioCtx.close(); } catch (e) {} audioCtx = null; }
     input.placeholder = "Type your message…";
-    try { recog && recog.stop(); } catch (e) {}
+    if (!heardSpeech || !audioChunks.length) { audioChunks = []; return; }
+    var blob = new Blob(audioChunks, { type: "audio/webm" });
+    audioChunks = [];
+    var fd = new FormData();
+    fd.append("audio", blob, "speech.webm");
+    input.placeholder = "Transcribing…";
+    fetch(transcribeUrl, { method: "POST", body: fd })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        input.placeholder = "Type your message…";
+        var t = (d && d.text ? d.text : "").trim();
+        if (t) send(t);
+      })
+      .catch(function () { input.placeholder = "Type your message…"; });
   }
 
   if (micBtn) {
