@@ -39,13 +39,23 @@ async function saveMessage(sessionId, role, content) {
   );
 }
 
-async function getHistory(sessionId, limit = 12) {
+async function getHistory(sessionId, limit = 24) {
   const res = await query(
     `SELECT role, content FROM messages WHERE session_id = $1
      ORDER BY created_at DESC, id DESC LIMIT $2`,
     [sessionId, limit]
   );
   return res.rows.reverse();
+}
+
+// Full transcript for a session (used by the widget to restore after a refresh).
+export async function getSessionMessages(sessionId, limit = 100) {
+  const res = await query(
+    `SELECT role, content FROM messages WHERE session_id = $1
+     ORDER BY created_at, id LIMIT $2`,
+    [sessionId, limit]
+  );
+  return res.rows;
 }
 
 async function getLead(sessionId) {

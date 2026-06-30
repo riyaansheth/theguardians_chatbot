@@ -1,5 +1,5 @@
 // Pure scoring. No DB, no LLM. Deterministic and unit-testable.
-import { norm, eq, locMatch, bhkNumber, asArray, clusterOf, coordOf, areaKm } from "./normalize.js";
+import { norm, eq, locMatch, bhkNumber, asArray, clusterOf, coordOf, areaKm, canonicalArea } from "./normalize.js";
 
 // Two localities within this many km count as "nearby".
 const NEAR_KM = 5;
@@ -7,7 +7,10 @@ const NEAR_KM = 5;
 // ---- Location ----
 export function sameLocation(prefLoc, prop) {
   if (!prefLoc) return false;
-  return locMatch(prefLoc, prop.location) || locMatch(prefLoc, prop.micro_location);
+  if (locMatch(prefLoc, prop.location) || locMatch(prefLoc, prop.micro_location)) return true;
+  // Typo-tolerant: resolve the preferred area (e.g. "dadr" -> "dadar") and match.
+  const ca = canonicalArea(prefLoc);
+  return !!ca && (locMatch(ca, prop.location) || locMatch(ca, prop.micro_location));
 }
 
 export function nearbyLocation(prefLoc, prop) {

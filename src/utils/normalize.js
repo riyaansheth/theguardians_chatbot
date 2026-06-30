@@ -124,19 +124,60 @@ const AREA_COORDS = {
   "kadamba": [15.500, 73.950], "panaji": [15.498, 73.827], "mapusa": [15.591, 73.809], "margao": [15.283, 73.985],
 };
 
-// [lat, lng] for a location string (longest matching area name wins), or null.
-export function coordOf(loc) {
+const AREA_TOKENS = Object.keys(AREA_COORDS);
+
+// Bounded Levenshtein edit distance.
+function editDistance(a, b) {
+  const m = a.length;
+  const n = b.length;
+  if (Math.abs(m - n) > 2) return 99;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) {
+      cur[j] = a[i - 1] === b[j - 1] ? prev[j - 1] : 1 + Math.min(prev[j], cur[j - 1], prev[j - 1]);
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+
+// Resolve a (possibly misspelled) location string to a known area token, or null.
+// Exact substring first; then a fuzzy match so "dadr"->dadar, "powaii"->powai.
+export function canonicalArea(loc) {
   const n = norm(loc);
   if (!n) return null;
   let best = null;
   let bestLen = 0;
-  for (const token in AREA_COORDS) {
-    if (n.includes(token) && token.length > bestLen) {
-      best = AREA_COORDS[token];
-      bestLen = token.length;
+  for (const t of AREA_TOKENS) {
+    if (n.includes(t) && t.length > bestLen) {
+      best = t;
+      bestLen = t.length;
     }
   }
-  return best;
+  if (best) return best;
+
+  const words = n.split(/[^a-z]+/).filter((w) => w.length >= 3);
+  let bestTok = null;
+  let bestScore = [3, 0]; // [distance asc, token length desc]
+  for (const w of words) {
+    for (const t of AREA_TOKENS) {
+      const thr = t.length <= 4 ? 1 : 2;
+      if (Math.abs(t.length - w.length) > thr) continue;
+      const d = editDistance(w, t);
+      if (d <= thr && (d < bestScore[0] || (d === bestScore[0] && t.length > bestScore[1]))) {
+        bestScore = [d, t.length];
+        bestTok = t;
+      }
+    }
+  }
+  return bestTok;
+}
+
+// [lat, lng] for a location string (typo-tolerant), or null.
+export function coordOf(loc) {
+  const t = canonicalArea(loc);
+  return t ? AREA_COORDS[t] : null;
 }
 
 // Approximate straight-line distance in km between two [lat, lng] pairs.
