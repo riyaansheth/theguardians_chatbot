@@ -225,25 +225,22 @@
       window.speechSynthesis.speak(u);
     } catch (e) { if (onEnd) onEnd(); }
   }
-  // Speak in a natural human voice via the server (OpenAI TTS); fall back to the
-  // browser's built-in voice. Calls onEnd when playback finishes.
+  // Speak via the server's STREAMING TTS — the browser plays the audio as it
+  // arrives, so the voice begins almost immediately. Falls back to the browser
+  // voice on error. Calls onEnd when playback finishes.
   function speak(text, onEnd) {
     if (!voiceOn) { if (onEnd) onEnd(); return; }
     var clean = String(text).replace(/[*_#`]/g, "").replace(/\s+/g, " ").slice(0, 800);
     stopVoice();
-    fetch(ttsUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: clean }),
-    })
-      .then(function (r) { if (!r.ok) throw 0; return r.blob(); })
-      .then(function (blob) {
-        if (!voiceOn) { if (onEnd) onEnd(); return; }
-        currentAudio = new Audio(URL.createObjectURL(blob));
-        currentAudio.onended = function () { if (onEnd) onEnd(); };
-        currentAudio.play().catch(function () { browserSpeak(clean, onEnd); });
-      })
-      .catch(function () { browserSpeak(clean, onEnd); });
+    try {
+      currentAudio = new Audio(ttsUrl + "?text=" + encodeURIComponent(clean));
+      currentAudio.preload = "auto";
+      currentAudio.onended = function () { if (onEnd) onEnd(); };
+      currentAudio.onerror = function () { browserSpeak(clean, onEnd); };
+      currentAudio.play().catch(function () { browserSpeak(clean, onEnd); });
+    } catch (e) {
+      browserSpeak(clean, onEnd);
+    }
   }
 
   var micBlocked = false;

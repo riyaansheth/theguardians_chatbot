@@ -1,7 +1,8 @@
 import { Router } from "express";
 import multer from "multer";
+import { Readable } from "node:stream";
 import { handleChat, getSessionMessages } from "../services/chat.service.js";
-import { synthesizeSpeech, ttsAvailable, transcribeAudio } from "../services/openai.service.js";
+import { synthesizeSpeech, streamSpeech, ttsAvailable, transcribeAudio } from "../services/openai.service.js";
 
 const router = Router();
 const audioUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
@@ -27,6 +28,28 @@ router.post("/tts", async (req, res, next) => {
     res.setHeader("Content-Type", "audio/mpeg");
     res.setHeader("Cache-Control", "no-store");
     res.send(audio);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/tts?text=... -> streamed audio, so playback starts almost immediately.
+router.get("/tts", async (req, res, next) => {
+  try {
+    const text = (req.query.text ?? "").toString().trim();
+    if (!text) return res.status(400).json({ error: "text is required" });
+    if (!ttsAvailable()) return res.status(503).json({ error: "voice not available" });
+    const response = await streamSpeech(text, req.query.voice);
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Cache-Control", "no-store");
+    const body = response && response.body;
+    if (body && typeof body.pipe === "function") {
+      body.pipe(res); // Node stream (OpenAI SDK)
+    } else if (body && typeof body.getReader === "function") {
+      Readable.fromWeb(body).pipe(res); // Web ReadableStream
+    } else {
+      res.send(Buffer.from(await response.arrayBuffer()));
+    }
   } catch (err) {
     next(err);
   }

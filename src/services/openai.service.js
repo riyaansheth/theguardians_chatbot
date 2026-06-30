@@ -46,9 +46,7 @@ const VOICE_INSTRUCTIONS =
   "consultant who enjoys matching families with homes they'll love. Keep the energy upbeat, " +
   "reassuring, and professional throughout the conversation.";
 
-// Synthesize spoken audio (mp3 Buffer) for a reply, in a natural human voice.
-export async function synthesizeSpeech(text, voiceOverride) {
-  if (!client) return null;
+function ttsParams(text, voiceOverride) {
   const params = {
     model: env.openaiTtsModel,
     voice: voiceOverride || env.openaiTtsVoice,
@@ -57,8 +55,21 @@ export async function synthesizeSpeech(text, voiceOverride) {
   };
   // Only the gpt-4o(-mini)-tts models can be steered with delivery instructions.
   if (/gpt-4o.*tts/i.test(env.openaiTtsModel)) params.instructions = VOICE_INSTRUCTIONS;
-  const res = await client.audio.speech.create(params);
+  return params;
+}
+
+// Synthesize spoken audio (mp3 Buffer) for a reply, in a natural human voice.
+export async function synthesizeSpeech(text, voiceOverride) {
+  if (!client) return null;
+  const res = await client.audio.speech.create(ttsParams(text, voiceOverride));
   return Buffer.from(await res.arrayBuffer());
+}
+
+// Same, but returns the raw streaming Response so the audio can be piped to the
+// client and start playing as soon as the first bytes arrive (lower latency).
+export async function streamSpeech(text, voiceOverride) {
+  if (!client) return null;
+  return client.audio.speech.create(ttsParams(text, voiceOverride));
 }
 
 // Function schema the model fills (CLAUDE.md spec, verbatim shape).
