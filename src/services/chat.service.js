@@ -340,6 +340,17 @@ export async function handleChat({ sessionId, message, pageUrl }) {
     prefs.budget_min = Math.round(bmax * 0.6);
   }
 
+  // "unlimited budget / money is no object / no budget limit" -> no ceiling, so
+  // we stop asking and everything qualifies on budget.
+  if (
+    /\b(unlimited|no limit|no cap|no upper limit|no (budget )?(limit|cap|ceiling|constraint|maximum|max))\b/i.test(message) ||
+    /\b(money|price|cost|budget) (is )?(no|not a) (bar|object|issue|problem|concern|constraint|limit)\b/i.test(message) ||
+    /\b(whatever it takes|sky'?s the limit|price no bar|no budget constraints?)\b/i.test(message)
+  ) {
+    prefs.budget_min = 0;
+    prefs.budget_max = 100000000000; // effectively unlimited
+  }
+
   const leadScore = scoreLead(prefs);
 
   // 5. DECIDE next step deterministically.
