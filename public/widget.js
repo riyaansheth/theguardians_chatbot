@@ -177,6 +177,8 @@
     if (!greeted) {
       greeted = true;
       greet();
+      // Auto-start the voice agent: speak the greeting, then listen hands-free.
+      speak(GREETING, autoListen);
     }
   }
   function closePanel() {
@@ -195,6 +197,7 @@
     root_.classList.add("tg-open");
     input.focus();
     greet();
+    speak(GREETING, autoListen);
   }
 
   // ---- voice: browser Web Speech API (speech-to-text + text-to-speech) ----
@@ -212,19 +215,20 @@
     if (currentAudio) { try { currentAudio.pause(); } catch (e) {} currentAudio = null; }
     if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch (e) {} }
   }
-  function browserSpeak(text) {
-    if (!window.speechSynthesis) return;
+  function browserSpeak(text, onEnd) {
+    if (!window.speechSynthesis) { if (onEnd) onEnd(); return; }
     try {
       var u = new SpeechSynthesisUtterance(text);
       u.lang = "en-IN";
       u.rate = 1.03;
+      u.onend = function () { if (onEnd) onEnd(); };
       window.speechSynthesis.speak(u);
-    } catch (e) {}
+    } catch (e) { if (onEnd) onEnd(); }
   }
   // Speak in a natural human voice via the server (OpenAI TTS); fall back to the
-  // browser's built-in voice if that's unavailable.
-  function speak(text) {
-    if (!voiceOn) return;
+  // browser's built-in voice. Calls onEnd when playback finishes.
+  function speak(text, onEnd) {
+    if (!voiceOn) { if (onEnd) onEnd(); return; }
     var clean = String(text).replace(/[*_#`]/g, "").replace(/\s+/g, " ").slice(0, 800);
     stopVoice();
     fetch(ttsUrl, {
@@ -234,11 +238,19 @@
     })
       .then(function (r) { if (!r.ok) throw 0; return r.blob(); })
       .then(function (blob) {
-        if (!voiceOn) return;
+        if (!voiceOn) { if (onEnd) onEnd(); return; }
         currentAudio = new Audio(URL.createObjectURL(blob));
-        currentAudio.play().catch(function () { browserSpeak(clean); });
+        currentAudio.onended = function () { if (onEnd) onEnd(); };
+        currentAudio.play().catch(function () { browserSpeak(clean, onEnd); });
       })
-      .catch(function () { browserSpeak(clean); });
+      .catch(function () { browserSpeak(clean, onEnd); });
+  }
+
+  // Hands-free: once the bot finishes speaking, start listening for the reply.
+  function autoListen() {
+    if (voiceOn && opened && recog && !listening) {
+      try { startListening(); } catch (e) {}
+    }
   }
 
   if (SR) {
@@ -304,7 +316,7 @@
         var reply = data.reply || data.error || "Sorry, something went wrong. Please try again.";
         addMessage(reply, "bot");
         if (data.recommendations && data.recommendations.length) data.recommendations.forEach(addCard);
-        if (data.reply) speak(reply); // speak real replies, not error notices
+        if (data.reply) speak(reply, autoListen); // speak, then listen hands-free
       })
       .catch(function () {
         typing.remove();

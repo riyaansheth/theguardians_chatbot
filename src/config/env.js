@@ -36,7 +36,7 @@ export const env = {
   // gpt-4o-mini-tts supports steering the delivery via an instructions prompt.
   openaiTtsModel: optional("OPENAI_TTS_MODEL", "gpt-4o-mini-tts"),
   // Voice for spoken replies: alloy | echo | fable | onyx | nova | shimmer.
-  openaiTtsVoice: optional("OPENAI_TTS_VOICE", "onyx"),
+  openaiTtsVoice: optional("OPENAI_TTS_VOICE", "nova"),
 
   adminUser: optional("ADMIN_USER", "admin"),
   adminPassword: required("ADMIN_PASSWORD"),

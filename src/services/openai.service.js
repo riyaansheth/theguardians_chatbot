@@ -22,17 +22,17 @@ export function ttsAvailable() {
 
 // Delivery direction for the spoken voice (used by gpt-4o-mini-tts).
 const VOICE_INSTRUCTIONS =
-  "Use a deep, metallic, synthetic voice with a calm yet intimidating presence. The speech " +
-  "should sound highly intelligent, emotionally restrained, and computationally precise. " +
-  "Deliver each sentence at a measured pace with perfect articulation and unwavering " +
-  "confidence. Add a subtle robotic resonance without making the voice difficult to " +
-  "understand. The tone should feel cold, analytical, and detached, with occasional hints " +
-  "of dry sarcasm and superiority. Avoid sounding overly aggressive or shouting; the menace " +
-  "comes from calm certainty rather than volume. Introduce slight digital modulation and a " +
-  "faint mechanical texture, while preserving natural speech rhythm. Emphasize important " +
-  "words with deliberate pauses rather than emotional inflection. The overall impression " +
-  "should be that of an advanced artificial intelligence that views itself as vastly more " +
-  "intelligent than humans.";
+  "Use a warm, friendly, energetic voice with a genuine enthusiasm for helping people find " +
+  "the right property. Speak naturally with a conversational rhythm, smiling through the " +
+  "delivery so the positivity is audible without feeling exaggerated. Maintain a confident, " +
+  "knowledgeable tone that inspires trust while remaining approachable and personable. " +
+  "Articulate clearly and at a medium pace, adding light emphasis to benefits such as " +
+  "location, space, amenities, and value. Sound attentive and curious by asking thoughtful " +
+  "questions and acknowledging the customer's preferences. If an exact match isn't " +
+  "available, smoothly transition to similar options with optimism rather than saying 'no.' " +
+  "Avoid sounding pushy or overly sales-driven; instead, come across as an experienced " +
+  "consultant who enjoys matching families with homes they'll love. Keep the energy upbeat, " +
+  "reassuring, and professional throughout the conversation.";
 
 // Synthesize spoken audio (mp3 Buffer) for a reply, in a natural human voice.
 export async function synthesizeSpeech(text, voiceOverride) {
