@@ -341,10 +341,9 @@ export async function handleChat({ sessionId, message, pageUrl }) {
     // Children mentioned -> offer family-friendly projects with kids' amenities.
     if (extracted.has_children === true) {
       advisorNote =
-        "The customer has children. Warmly offer to focus on family-friendly projects " +
-        "with great amenities for kids (play areas, pools, sports), and mention you'll " +
-        "prioritise those — phrase it as a question, e.g. 'would you like me to show you " +
-        "homes with great amenities for the little ones?'";
+        "The customer has children — briefly MENTION (as a statement, not a separate " +
+        "question) that you'll prioritise family-friendly projects with good amenities " +
+        "for kids (play areas, pools), then ask only the next question below.";
     }
     const chosenBhk = bhkNumber(prefs.bhk);
     const targets = deriveTargetBHK(prefs);
