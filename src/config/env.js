@@ -33,6 +33,9 @@ export const env = {
   openaiApiKey: required("OPENAI_API_KEY"),
   openaiChatModel: optional("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
   openaiEmbeddingModel: optional("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
+  openaiTtsModel: optional("OPENAI_TTS_MODEL", "tts-1"),
+  // Voice for spoken replies: alloy | echo | fable | onyx | nova | shimmer.
+  openaiTtsVoice: optional("OPENAI_TTS_VOICE", "nova"),
 
   adminUser: optional("ADMIN_USER", "admin"),
   adminPassword: required("ADMIN_PASSWORD"),

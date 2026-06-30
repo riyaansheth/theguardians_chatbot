@@ -27,26 +27,11 @@
     });
   }
 
-  // Session persists across refreshes (context memory). The ↻ button / "start
-  // over" starts a fresh one.
-  var SESSION_KEY = "tg_session_id";
-  var SESSION_ID = (function () {
-    try {
-      var id = localStorage.getItem(SESSION_KEY);
-      if (!id) {
-        id = uuid();
-        localStorage.setItem(SESSION_KEY, id);
-      }
-      return id;
-    } catch (e) {
-      return uuid();
-    }
-  })();
+  // Fresh session per page load — refreshing the page wipes the conversation.
+  // Within a page session the bot keeps full context (server-side memory).
+  var SESSION_ID = uuid();
   function sessionId() { return SESSION_ID; }
-  function newSession() {
-    SESSION_ID = uuid();
-    try { localStorage.setItem(SESSION_KEY, SESSION_ID); } catch (e) {}
-  }
+  function newSession() { SESSION_ID = uuid(); }
 
   // ---- build DOM inside a shadow root ----
   var host = document.createElement("div");
@@ -185,35 +170,20 @@
     renderSuggestions();
   }
 
-  // Restore the prior conversation (context memory) or greet if it's new.
-  function restoreOrGreet() {
-    fetch(sessionUrl + encodeURIComponent(SESSION_ID))
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (data) {
-        var msgs = data && data.messages;
-        if (msgs && msgs.length) {
-          msgs.forEach(function (m) { addMessage(m.content, m.role === "user" ? "user" : "bot"); });
-        } else {
-          greet();
-        }
-      })
-      .catch(greet);
-  }
-
   function openPanel() {
     opened = true;
     root_.classList.add("tg-open");
     input.focus();
     if (!greeted) {
       greeted = true;
-      restoreOrGreet();
+      greet();
     }
   }
   function closePanel() {
     opened = false;
     root_.classList.remove("tg-open");
     stopListening();
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    stopVoice();
   }
 
   function restartChat() {
@@ -235,16 +205,40 @@
 
   if (!SR && micBtn) micBtn.style.display = "none";
 
-  function speak(text) {
-    if (!voiceOn || !window.speechSynthesis) return;
+  var ttsUrl = apiUrl.replace(/\/chat\/?$/, "/tts");
+  var currentAudio = null;
+
+  function stopVoice() {
+    if (currentAudio) { try { currentAudio.pause(); } catch (e) {} currentAudio = null; }
+    if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+  }
+  function browserSpeak(text) {
+    if (!window.speechSynthesis) return;
     try {
-      window.speechSynthesis.cancel();
-      var clean = String(text).replace(/[*_#`]/g, "").replace(/\s+/g, " ").slice(0, 600);
-      var u = new SpeechSynthesisUtterance(clean);
+      var u = new SpeechSynthesisUtterance(text);
       u.lang = "en-IN";
       u.rate = 1.03;
       window.speechSynthesis.speak(u);
     } catch (e) {}
+  }
+  // Speak in a natural human voice via the server (OpenAI TTS); fall back to the
+  // browser's built-in voice if that's unavailable.
+  function speak(text) {
+    if (!voiceOn) return;
+    var clean = String(text).replace(/[*_#`]/g, "").replace(/\s+/g, " ").slice(0, 800);
+    stopVoice();
+    fetch(ttsUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: clean }),
+    })
+      .then(function (r) { if (!r.ok) throw 0; return r.blob(); })
+      .then(function (blob) {
+        if (!voiceOn) return;
+        currentAudio = new Audio(URL.createObjectURL(blob));
+        currentAudio.play().catch(function () { browserSpeak(clean); });
+      })
+      .catch(function () { browserSpeak(clean); });
   }
 
   if (SR) {
@@ -284,7 +278,7 @@
     voiceOn = !voiceOn;
     speakBtn.classList.toggle("active", voiceOn);
     speakBtn.innerHTML = voiceOn ? "&#128266;" : "&#128263;"; // 🔊 / 🔇
-    if (!voiceOn && window.speechSynthesis) window.speechSynthesis.cancel();
+    if (!voiceOn) stopVoice();
   });
 
   launcher.addEventListener("click", function () { opened ? closePanel() : openPanel(); });
@@ -303,15 +297,14 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId: sessionId(), message: text, pageUrl: window.location.href }),
     })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
+      .then(function (r) { return r.json().then(function (d) { return { status: r.status, data: d }; }); })
+      .then(function (res) {
         typing.remove();
-        var reply = data && data.reply ? data.reply : "Sorry, something went wrong. Please try again.";
+        var data = res.data || {};
+        var reply = data.reply || data.error || "Sorry, something went wrong. Please try again.";
         addMessage(reply, "bot");
-        if (data && data.recommendations && data.recommendations.length) {
-          data.recommendations.forEach(addCard);
-        }
-        speak(reply);
+        if (data.recommendations && data.recommendations.length) data.recommendations.forEach(addCard);
+        if (data.reply) speak(reply); // speak real replies, not error notices
       })
       .catch(function () {
         typing.remove();

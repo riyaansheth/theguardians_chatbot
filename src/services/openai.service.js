@@ -16,6 +16,22 @@ export function llmAvailable() {
   return client !== null;
 }
 
+export function ttsAvailable() {
+  return client !== null;
+}
+
+// Synthesize spoken audio (mp3 Buffer) for a reply, in a natural human voice.
+export async function synthesizeSpeech(text, voiceOverride) {
+  if (!client) return null;
+  const res = await client.audio.speech.create({
+    model: env.openaiTtsModel,
+    voice: voiceOverride || env.openaiTtsVoice,
+    input: String(text).replace(/[*_#`]/g, "").slice(0, 2000),
+    response_format: "mp3",
+  });
+  return Buffer.from(await res.arrayBuffer());
+}
+
 // Function schema the model fills (CLAUDE.md spec, verbatim shape).
 export const EXTRACT_TOOL = {
   type: "function",
