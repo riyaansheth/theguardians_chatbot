@@ -55,7 +55,7 @@
         '<div><div class="tg-title">' + botName + "</div>" +
         '<div class="tg-sub">Real estate concierge</div></div>' +
         '<div class="tg-actions">' +
-          '<button class="tg-speak" aria-label="Toggle voice replies" title="Voice replies">&#128263;</button>' +
+          '<button class="tg-speak active" aria-label="Toggle voice replies" title="Voice replies">&#128266;</button>' +
           '<button class="tg-restart" aria-label="Start over" title="Start over">&#10227;</button>' +
           '<button class="tg-close" aria-label="Close">&times;</button>' +
         "</div>" +
@@ -201,7 +201,7 @@
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var recog = null;
   var listening = false;
-  var voiceOn = false;
+  var voiceOn = true; // voice replies on by default
 
   if (!SR && micBtn) micBtn.style.display = "none";
 
